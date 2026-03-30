@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-headline: var(--font-inter);
+  --font-body: var(--font-inter);
+  --font-label: var(--font-inter);
+
+  --color-on-tertiary-container: #670025;
+  --color-primary: #00675b;
+  --color-on-secondary-fixed-variant: #596000;
+  --color-on-primary-fixed-variant: #006358;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-tertiary-fixed: #390011;
+  --color-error-container: #fb5151;
+  --color-tertiary-fixed-dim: #ff7794;
+  --color-on-tertiary-fixed-variant: #77002d;
+  --color-background: #f6f6ff;
+  --color-surface-tint: #00675b;
+  --color-surface-bright: #f6f6ff;
+  --color-on-primary: #c1fff2;
+  --color-secondary: #596000;
+  --color-surface-variant: #d1dcff;
+  --color-error-dim: #9f0519;
+  --color-secondary-dim: #4d5400;
+  --color-on-secondary-container: #4f5600;
+  --color-on-secondary-fixed: #3d4300;
+  --color-surface-container-highest: #d1dcff;
+  --color-surface-dim: #c7d4fa;
+  --color-secondary-fixed: #dded49;
+  --color-primary-container: #91eedc;
+  --color-secondary-fixed-dim: #cfde3b;
+  --color-tertiary: #b70049;
+  --color-tertiary-dim: #a1003f;
+  --color-outline-variant: #a5adc6;
+  --color-error: #b31b25;
+  --color-outline: #6f768e;
+  --color-on-secondary: #eefd58;
+  --color-on-error: #ffefee;
+  --color-primary-fixed-dim: #83dfce;
+  --color-inverse-surface: #060e20;
+  --color-on-background: #272e42;
+  --color-on-primary-fixed: #00443c;
+  --color-primary-fixed: #91eedc;
+  --color-on-error-container: #570008;
+  --color-surface-container-low: #eef0ff;
+  --color-secondary-container: #dded49;
+  --color-on-tertiary: #ffeff0;
+  --color-on-surface: #272e42;
+  --color-tertiary-fixed: #ff8fa4;
+  --color-on-primary-container: #00594e;
+  --color-inverse-on-surface: #959cb5;
+  --color-surface: #f6f6ff;
+  --color-tertiary-container: #ff8fa4;
+  --color-inverse-primary: #a2ffed;
+  --color-surface-container-high: #d9e2ff;
+  --color-on-surface-variant: #535b71;
+  --color-surface-container: #e2e7ff;
+  --color-primary-dim: #005a4f;
+
+  --radius-default: 1rem;
+  --radius-lg: 2rem;
+  --radius-xl: 3rem;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-on-background;
+  }
+}
+
+.brand-gradient {
+  background: linear-gradient(45deg, #00796B 0%, #CDDC39 100%);
+}
+
+.brand-gradient-hover:hover {
+  background: linear-gradient(45deg, #00675b 0%, #b8c734 100%);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+}
