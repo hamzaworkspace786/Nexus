@@ -4,5 +4,9 @@
     "files": [
       "static/chunks/_app-pages-browser_node_modules_next_dist_client_dev_noop-turbopack-hmr_js.js"
     ]
+  },
+  "node_modules\\tldraw\\dist-esm\\lib\\defaultExternalContentHandlers.mjs -> ./utils/svg/sanitizeSvg.mjs": {
+    "id": "node_modules\\tldraw\\dist-esm\\lib\\defaultExternalContentHandlers.mjs -> ./utils/svg/sanitizeSvg.mjs",
+    "files": []
   }
 }

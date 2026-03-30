@@ -25,6 +25,12 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/dashboard/page.js"
+    ],
+    "/whiteboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/whiteboard/page.css",
+      "static/chunks/app/whiteboard/page.js"
     ]
   }
 }
