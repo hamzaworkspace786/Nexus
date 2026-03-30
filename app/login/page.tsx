@@ -2,10 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { motion } from "motion/react";
-import { Github, Mail, Lock, User, ArrowRight, MousePointer2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Github, Mail, Lock } from "lucide-react";
 
 export default function LoginPage() {
     const handleSubmit = (e: React.FormEvent) => {
@@ -50,7 +48,7 @@ export default function LoginPage() {
                         transition={{ delay: 0.3 }}
                         className="text-lg text-slate-400 leading-relaxed"
                     >
-                        Experience the future of collaborative whiteboarding. A canvas designed to amplify your team's collective genius.
+                        Experience the future of collaborative whiteboarding. A canvas designed to amplify your team&apos;s collective genius.
                     </motion.p>
 
                     <motion.div
@@ -62,11 +60,11 @@ export default function LoginPage() {
                         <div className="flex -space-x-3">
                             {[1, 2, 3].map((i) => (
                                 <div key={i} className="w-10 h-10 rounded-full border-2 border-slate-900 overflow-hidden bg-slate-800">
-                                    <Image
+                                    {/* Swapped Next Image to a standard img tag to prevent external domain crashing */}
+                                    <img
                                         src={`https://picsum.photos/seed/auth${i}/100/100`}
-                                        alt="User"
-                                        width={40}
-                                        height={40}
+                                        alt="User avatar"
+                                        className="w-full h-full object-cover"
                                         referrerPolicy="no-referrer"
                                     />
                                 </div>
@@ -79,8 +77,8 @@ export default function LoginPage() {
                 <div className="relative z-10 flex justify-between items-center text-[10px] uppercase tracking-widest text-slate-600 font-bold">
                     <span>© 2026 Nexus Collaborative. All rights reserved.</span>
                     <div className="flex gap-6">
-                        <a href="#" className="hover:text-slate-400 transition-colors">Privacy</a>
-                        <a href="#" className="hover:text-slate-400 transition-colors">Terms</a>
+                        <Link href="#" className="hover:text-slate-400 transition-colors">Privacy</Link>
+                        <Link href="#" className="hover:text-slate-400 transition-colors">Terms</Link>
                     </div>
                 </div>
             </motion.div>
@@ -125,10 +123,11 @@ export default function LoginPage() {
 
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Email Address</label>
+                            <label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Email Address</label>
                             <div className="relative">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                                 <input
+                                    id="email"
                                     type="email"
                                     name="email"
                                     required
@@ -140,12 +139,13 @@ export default function LoginPage() {
 
                         <div className="space-y-2">
                             <div className="flex justify-between items-center px-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Password</label>
+                                <label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-500">Password</label>
                                 <Link href="#" className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-dim transition-colors">Forgot Password?</Link>
                             </div>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                                 <input
+                                    id="password"
                                     type="password"
                                     name="password"
                                     required
@@ -164,7 +164,7 @@ export default function LoginPage() {
                     </form>
 
                     <p className="text-center text-sm text-slate-400">
-                        Don't have an account?{" "}
+                        Don&apos;t have an account?{" "}
                         <Link href="/register" className="text-primary font-bold hover:underline">
                             Create one for free
                         </Link>

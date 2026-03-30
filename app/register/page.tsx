@@ -2,10 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { motion } from "motion/react";
 import { Github, Mail, Lock, User, CheckCircle2, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export default function RegisterPage() {
     const handleSubmit = (e: React.FormEvent) => {
@@ -77,8 +75,8 @@ export default function RegisterPage() {
                 <div className="relative z-10 flex justify-between items-center text-[10px] uppercase tracking-widest text-slate-600 font-bold">
                     <span>© 2026 Nexus Collaborative. All rights reserved.</span>
                     <div className="flex gap-6">
-                        <a href="#" className="hover:text-slate-400 transition-colors">Privacy</a>
-                        <a href="#" className="hover:text-slate-400 transition-colors">Terms</a>
+                        <Link href="#" className="hover:text-slate-400 transition-colors">Privacy</Link>
+                        <Link href="#" className="hover:text-slate-400 transition-colors">Terms</Link>
                     </div>
                 </div>
             </motion.div>
@@ -123,10 +121,11 @@ export default function RegisterPage() {
 
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Full Name</label>
+                            <label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Full Name</label>
                             <div className="relative">
                                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                                 <input
+                                    id="name"
                                     type="text"
                                     name="name"
                                     required
@@ -137,10 +136,11 @@ export default function RegisterPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Email Address</label>
+                            <label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Email Address</label>
                             <div className="relative">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                                 <input
+                                    id="email"
                                     type="email"
                                     name="email"
                                     required
@@ -151,10 +151,11 @@ export default function RegisterPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Password</label>
+                            <label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Password</label>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                                 <input
+                                    id="password"
                                     type="password"
                                     name="password"
                                     required

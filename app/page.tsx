@@ -1,7 +1,7 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "motion/react";
-import Image from "next/image";
 import {
   ArrowRight,
   Mic,
@@ -16,8 +16,7 @@ import {
   RefreshCw,
   Menu,
   MousePointer2,
-  LayoutDashboard,
-  type LucideIcon
+  LayoutDashboard
 } from "lucide-react";
 
 // --- Components ---
@@ -26,13 +25,12 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 w-full flex justify-between items-center px-8 py-4 max-w-[1440px] left-1/2 -translate-x-1/2 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl">
       <div className="flex items-center gap-12">
-        {/* Changed from <span> to <a> and added href="#" */}
-        <a
-          href="#"
+        <Link
+          href="/"
           className="text-2xl font-black tracking-tighter text-slate-900 dark:text-slate-50 hover:opacity-80 transition-opacity"
         >
           Nexus
-        </a>
+        </Link>
         <div className="hidden md:flex items-center gap-8">
           <a className="text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-colors text-sm font-medium tracking-tight" href="#features">
             Features
@@ -43,10 +41,10 @@ const Navbar = () => {
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <a className="hidden lg:block text-slate-600 font-medium text-sm px-4 py-2 hover:text-slate-900 transition-colors" href="#">Log in</a>
-        <button className="brand-gradient text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-primary/20 brand-gradient-hover transition-all transform active:scale-95">
+        <Link className="hidden lg:block text-slate-600 font-medium text-sm px-4 py-2 hover:text-slate-900 transition-colors" href="/login">Log in</Link>
+        <Link href="/register" className="brand-gradient text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-primary/20 brand-gradient-hover transition-all transform active:scale-95 text-center inline-block">
           Get Started for Free
-        </button>
+        </Link>
         <Menu className="md:hidden text-on-surface p-2 cursor-pointer" />
       </div>
     </nav>
@@ -90,12 +88,12 @@ const Hero = () => {
           transition={{ delay: 0.3 }}
           className="flex flex-col sm:flex-row items-center gap-4 pt-4"
         >
-          <button className="w-full sm:w-auto brand-gradient text-white px-10 py-5 rounded-full text-lg font-bold shadow-xl shadow-primary/25 hover:shadow-2xl transition-all transform hover:-translate-y-1">
+          <Link href="/register" className="w-full sm:w-auto brand-gradient text-white px-10 py-5 rounded-full text-lg font-bold shadow-xl shadow-primary/25 hover:shadow-2xl transition-all transform hover:-translate-y-1 text-center inline-block">
             Get Started for Free
-          </button>
-          <button className="w-full sm:w-auto border-2 border-outline px-10 py-5 rounded-full text-lg font-bold text-on-surface hover:bg-surface-container-low transition-all">
+          </Link>
+          <Link href="/register" className="w-full sm:w-auto border-2 border-outline px-10 py-5 rounded-full text-lg font-bold text-on-surface hover:bg-surface-container-low transition-all text-center inline-block">
             Start Drawing
-          </button>
+          </Link>
         </motion.div>
 
         <motion.div
@@ -106,14 +104,12 @@ const Hero = () => {
         >
           <div className="flex -space-x-3">
             {[1, 2, 3].map((i) => (
-              <Image
+              <img
                 key={i}
                 alt={`Team member avatar ${i}`}
                 className="w-10 h-10 rounded-full border-2 border-white object-cover"
                 src={`https://picsum.photos/seed/user${i}/100/100`}
-                width={40}
-                height={40}
-                unoptimized
+                referrerPolicy="no-referrer"
               />
             ))}
           </div>
@@ -197,31 +193,30 @@ const WhiteboardPreview = () => {
             <button className="p-2 hover:bg-slate-100 rounded-full"><ImageIcon className="w-5 h-5" /></button>
           </div>
 
-          <div className="p-16 h-full flex flex-col items-center justify-center text-center space-y-8">
-            <Image
+          <div className="p-16 h-full flex flex-col items-center justify-center text-center space-y-8 relative">
+            <img
               alt="Collaborative session in progress"
-              className="object-cover opacity-10 group-hover:opacity-20 transition-opacity"
+              className="absolute inset-0 w-full h-full object-cover opacity-10 group-hover:opacity-20 transition-opacity"
               src="https://picsum.photos/seed/whiteboard/1200/800"
-              fill
-              unoptimized
+              referrerPolicy="no-referrer"
             />
             <div className="relative z-10 space-y-4">
               <h2 className="text-3xl font-bold text-on-surface">Experience Infinite Flow</h2>
               <p className="text-on-surface-variant max-w-md mx-auto">One canvas for your entire team. Built on the speed of light.</p>
-              <button className="bg-primary text-white px-8 py-3 rounded-full font-bold inline-flex items-center gap-2 shadow-lg shadow-primary/20">
+              <Link href="/login" className="bg-primary text-white px-8 py-3 rounded-full font-bold inline-flex items-center gap-2 shadow-lg shadow-primary/20">
                 Open Dashboard <ArrowRight className="w-5 h-5" />
-              </button>
+              </Link>
             </div>
           </div>
 
           <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end z-20">
             <div className="flex gap-2">
               <div className="w-16 h-16 rounded-2xl bg-slate-900 overflow-hidden relative border-2 border-white shadow-lg">
-                <Image alt="Caller 1" src="https://picsum.photos/seed/caller1/100/100" fill className="object-cover" unoptimized />
+                <img alt="Caller 1" src="https://picsum.photos/seed/caller1/100/100" className="absolute inset-0 w-full h-full object-cover" referrerPolicy="no-referrer" />
                 <div className="absolute bottom-1 right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
               </div>
               <div className="w-16 h-16 rounded-2xl bg-slate-900 overflow-hidden relative border-2 border-white shadow-lg">
-                <Image alt="Caller 2" src="https://picsum.photos/seed/caller2/100/100" fill className="object-cover" unoptimized />
+                <img alt="Caller 2" src="https://picsum.photos/seed/caller2/100/100" className="absolute inset-0 w-full h-full object-cover" referrerPolicy="no-referrer" />
               </div>
             </div>
             <div className="bg-slate-900 px-6 py-3 rounded-full flex items-center gap-6 shadow-2xl">
@@ -255,13 +250,11 @@ const Features = () => {
             <h3 className="text-3xl font-bold mb-4">Voice-Integrated Canvasing</h3>
             <p className="text-on-surface-variant max-w-md">No more tab-switching. Use Google Meet audio natively inside your whiteboard to keep the momentum going.</p>
           </div>
-          <Image
+          <img
             alt="Voice collaboration visual"
             className="absolute bottom-0 right-0 w-2/3 h-1/2 object-cover rounded-tl-3xl shadow-2xl transition-transform duration-500 group-hover:scale-105"
             src="https://picsum.photos/seed/voice/600/400"
-            width={600}
-            height={400}
-            unoptimized
+            referrerPolicy="no-referrer"
           />
         </div>
 
@@ -305,12 +298,12 @@ const CTA = () => {
         <h2 className="text-4xl lg:text-6xl font-black tracking-tighter relative z-10">Start building the future of work today.</h2>
         <p className="text-xl opacity-90 max-w-2xl mx-auto relative z-10">Join 50,000+ companies using Nexus to bridge the gap between imagination and execution.</p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
-          <button className="bg-white text-primary px-10 py-5 rounded-full text-lg font-bold hover:bg-slate-50 transition-all shadow-xl">
+          <Link href="/register" className="bg-white text-primary px-10 py-5 rounded-full text-lg font-bold hover:bg-slate-50 transition-all shadow-xl text-center inline-block">
             Get Started for Free
-          </button>
-          <button className="bg-black/20 backdrop-blur-md text-white border border-white/30 px-10 py-5 rounded-full text-lg font-bold hover:bg-black/30 transition-all">
+          </Link>
+          <Link href="/register" className="bg-black/20 backdrop-blur-md text-white border border-white/30 px-10 py-5 rounded-full text-lg font-bold hover:bg-black/30 transition-all text-center inline-block">
             Start Drawing
-          </button>
+          </Link>
         </div>
       </div>
     </section>
