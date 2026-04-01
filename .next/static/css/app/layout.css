@@ -891,6 +891,12 @@
       border-color: color-mix(in oklab, var(--color-outline-variant) 20%, transparent);
     }
   }
+  .border-outline\/20 {
+    border-color: color-mix(in srgb, #6f768e 20%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-outline) 20%, transparent);
+    }
+  }
   .border-red-500\/20 {
     border-color: color-mix(in srgb, oklch(63.7% 0.237 25.331) 20%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -1963,6 +1969,11 @@
         --tw-scale-z: 100%;
         scale: var(--tw-scale-x) var(--tw-scale-y);
       }
+    }
+  }
+  .sm\:block {
+    @media (width >= 40rem) {
+      display: block;
     }
   }
   .sm\:flex {
