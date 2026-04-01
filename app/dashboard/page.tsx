@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
     Plus,
     Bell,
@@ -9,8 +10,20 @@ import {
     Search,
     Filter,
 } from "lucide-react";
+import { useSession } from "@/lib/auth-client"; // Importing our session hook
 
 export default function DashboardPage() {
+    const router = useRouter();
+    const { data: session } = useSession(); // Grab the logged-in user's data
+
+    // Handler to create a new board and redirect the user
+    const handleCreateBoard = () => {
+        // In a real app, you would make an API call to your database here to create the board.
+        // For now, we'll generate a random board ID and push them to that specific whiteboard URL.
+        const newBoardId = Math.random().toString(36).substring(2, 10);
+        router.push(`/whiteboard/${newBoardId}`);
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col">
 
@@ -24,14 +37,19 @@ export default function DashboardPage() {
                         <Link href="/dashboard" className="text-teal-400 font-bold border-b-2 border-teal-500 tracking-tight h-16 flex items-center">
                             Projects
                         </Link>
-                        <Link href="#" className="text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all font-medium tracking-tight px-3 py-1 rounded-full">
+                        {/* Updated to link to a generic /whiteboard route */}
+                        <Link href="/whiteboard" className="text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all font-medium tracking-tight px-3 py-1 rounded-full">
                             Whiteboard
                         </Link>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <button className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-teal-600 to-lime-500 hover:from-teal-500 hover:to-lime-400 text-slate-950 px-6 py-2 rounded-full font-bold active:scale-95 transition-all duration-200 shadow-lg shadow-teal-900/20">
+                    {/* Added onClick handler */}
+                    <button
+                        onClick={handleCreateBoard}
+                        className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-teal-600 to-lime-500 hover:from-teal-500 hover:to-lime-400 text-slate-950 px-6 py-2 rounded-full font-bold active:scale-95 transition-all duration-200 shadow-lg shadow-teal-900/20"
+                    >
                         <Plus className="w-4 h-4" />
                         New Board
                     </button>
@@ -46,7 +64,13 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-slate-800 ml-2 cursor-pointer active:scale-95 transition-all hover:border-teal-500">
-                        <img alt="User Profile" className="h-full w-full object-cover" src="https://picsum.photos/seed/profile/100/100" />
+                        {/* Dynamically pulling in the user's profile image or using a sleek UI Avatar fallback */}
+                        <img
+                            alt={session?.user?.name || "User Profile"}
+                            className="h-full w-full object-cover"
+                            src={session?.user?.image || `https://ui-avatars.com/api/?name=${session?.user?.name || 'User'}&background=0D8B93&color=fff`}
+                            referrerPolicy="no-referrer"
+                        />
                     </div>
                 </div>
             </nav>
@@ -58,7 +82,10 @@ export default function DashboardPage() {
                 <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div>
                         <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-teal-500 mb-2 block">Workspace Overview</span>
-                        <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter">Recent Projects</h1>
+                        {/* Personalized Greeting */}
+                        <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter">
+                            Welcome, {session?.user?.name?.split(" ")[0] || "Creator"}
+                        </h1>
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="relative">
@@ -78,8 +105,11 @@ export default function DashboardPage() {
                 {/* Bento Grid Layout - Empty State */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
 
-                    {/* Create New Board Card */}
-                    <button className="group relative flex flex-col items-center justify-center h-[280px] bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-teal-900/10 hover:scale-[1.02] hover:border-teal-500/50 hover:bg-slate-900/50 focus:outline-none">
+                    {/* Create New Board Card (Added onClick) */}
+                    <button
+                        onClick={handleCreateBoard}
+                        className="group relative flex flex-col items-center justify-center h-[280px] bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-teal-900/10 hover:scale-[1.02] hover:border-teal-500/50 hover:bg-slate-900/50 focus:outline-none"
+                    >
                         <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-gradient-to-r group-hover:from-teal-600 group-hover:to-lime-500 group-hover:text-slate-950 text-slate-400 transition-all duration-300 shadow-inner">
                             <Plus className="w-8 h-8" />
                         </div>
@@ -102,8 +132,11 @@ export default function DashboardPage() {
                 <p className="text-[0.6875rem] uppercase tracking-wider text-slate-600">© 2026 Nexus Collaborative. All rights reserved.</p>
             </footer>
 
-            {/* Mobile Floating Action Button */}
-            <button className="fixed bottom-8 right-8 bg-gradient-to-r from-teal-600 to-lime-500 text-slate-950 w-14 h-14 rounded-full shadow-lg shadow-teal-900/20 flex items-center justify-center active:scale-95 transition-all md:hidden">
+            {/* Mobile Floating Action Button (Added onClick) */}
+            <button
+                onClick={handleCreateBoard}
+                className="fixed bottom-8 right-8 bg-gradient-to-r from-teal-600 to-lime-500 text-slate-950 w-14 h-14 rounded-full shadow-lg shadow-teal-900/20 flex items-center justify-center active:scale-95 transition-all md:hidden"
+            >
                 <Plus className="w-8 h-8" />
             </button>
 

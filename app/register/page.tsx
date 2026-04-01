@@ -1,15 +1,57 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import { Github, Mail, Lock, User, CheckCircle2, Sparkles } from "lucide-react";
+import { Github, Mail, Lock, User, CheckCircle2, Sparkles, AlertCircle, Loader2 } from "lucide-react";
+import { signUp, signIn } from "@/lib/auth-client"; // Importing our Better Auth hooks
 
 export default function RegisterPage() {
-    const handleSubmit = (e: React.FormEvent) => {
+    const router = useRouter();
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    // Handle traditional Email/Password Registration
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsLoading(true);
+        setError(""); // Clear any previous errors
+
         const formData = new FormData(e.target as HTMLFormElement);
-        console.log("Registration data:", Object.fromEntries(formData));
+        const name = formData.get("name") as string;
+        const email = formData.get("email") as string;
+        const password = formData.get("password") as string;
+
+        const { data, error: authError } = await signUp.email({
+            email,
+            password,
+            name,
+        });
+
+        if (authError) {
+            setError(authError.message || "Something went wrong. Please try again.");
+            setIsLoading(false);
+        } else {
+            // Since autoSignIn is true in our config, they are already logged in!
+            router.push("/dashboard");
+        }
+    };
+
+    // Handle Social Logins
+    const handleSocialLogin = async (provider: "google" | "github") => {
+        setIsLoading(true);
+        setError("");
+
+        const { data, error: authError } = await signIn.social({
+            provider,
+            callbackURL: "/dashboard" // Redirect them here after Google/GitHub finishes
+        });
+
+        if (authError) {
+            setError(authError.message || `Failed to login with ${provider}.`);
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -94,8 +136,20 @@ export default function RegisterPage() {
                         <p className="text-slate-400">Join 10k+ innovators building the future together</p>
                     </div>
 
+                    {/* Error Message Display */}
+                    {error && (
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4" />
+                            {error}
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 gap-3">
-                        <button className="flex items-center justify-center gap-3 w-full py-3 px-4 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900 transition-all font-medium text-sm">
+                        <button
+                            onClick={() => handleSocialLogin("google")}
+                            disabled={isLoading}
+                            className="flex items-center justify-center gap-3 w-full py-3 px-4 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900 transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">
                                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -104,7 +158,11 @@ export default function RegisterPage() {
                             </svg>
                             Continue with Google
                         </button>
-                        <button className="flex items-center justify-center gap-3 w-full py-3 px-4 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900 transition-all font-medium text-sm">
+                        <button
+                            onClick={() => handleSocialLogin("github")}
+                            disabled={isLoading}
+                            className="flex items-center justify-center gap-3 w-full py-3 px-4 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900 transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
                             <Github className="w-5 h-5" />
                             Continue with GitHub
                         </button>
@@ -129,8 +187,9 @@ export default function RegisterPage() {
                                     type="text"
                                     name="name"
                                     required
+                                    disabled={isLoading}
                                     placeholder="John Doe"
-                                    className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                    className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm disabled:opacity-50"
                                 />
                             </div>
                         </div>
@@ -144,8 +203,9 @@ export default function RegisterPage() {
                                     type="email"
                                     name="email"
                                     required
+                                    disabled={isLoading}
                                     placeholder="student@example.com"
-                                    className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                    className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm disabled:opacity-50"
                                 />
                             </div>
                         </div>
@@ -159,17 +219,26 @@ export default function RegisterPage() {
                                     type="password"
                                     name="password"
                                     required
+                                    disabled={isLoading}
                                     placeholder="••••••••"
-                                    className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                    className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm disabled:opacity-50"
                                 />
                             </div>
                         </div>
 
                         <button
                             type="submit"
-                            className="w-full brand-gradient text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-primary/20 hover:shadow-2xl transition-all transform active:scale-[0.98] mt-4"
+                            disabled={isLoading}
+                            className="w-full brand-gradient text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-primary/20 hover:shadow-2xl transition-all transform active:scale-[0.98] mt-4 flex justify-center items-center gap-2 disabled:opacity-70 disabled:active:scale-100"
                         >
-                            Create Account
+                            {isLoading ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    Creating Account...
+                                </>
+                            ) : (
+                                "Create Account"
+                            )}
                         </button>
                     </form>
 
