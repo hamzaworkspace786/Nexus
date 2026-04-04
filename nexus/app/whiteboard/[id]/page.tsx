@@ -5,6 +5,7 @@ import { use } from "react";
 import { LiveblocksProvider, RoomProvider } from "@liveblocks/react/suspense";
 import { ClientSideSuspense } from "@liveblocks/react";
 import { Canvas } from "@/app/components/Canvas";
+import { LiveMap } from "@liveblocks/client"; // <-- NEW: Import LiveMap here
 
 export default function WhiteboardPage({ params }: { params: Promise<{ id: string }> }) {
 
@@ -13,13 +14,14 @@ export default function WhiteboardPage({ params }: { params: Promise<{ id: strin
 
     return (
         // 2. Wrap everything in LiveblocksProvider
-        // Replace the publicApiKey with your actual Liveblocks Public Key from your dashboard
-        // Or, if you set up an API route for auth, use: authEndpoint="/api/liveblocks-auth"
-        <LiveblocksProvider publicApiKey="pk_dev_LHHZgCuoLaEM9Fszu__rHuDXTkC8TChTjQ0Jpogq4JX9301OKPQMNrhWYB3fNTD1">
+        // REMOVED publicApiKey, ADDED authEndpoint to use your secure backend
+        <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
             <RoomProvider
                 id={roomId}
-                initialPresence={{} as any}
-                initialStorage={{} as any}
+                // 3. Initialize the cursor state
+                initialPresence={{ cursor: null }}
+                // 4. Initialize the empty Liveblocks database for shapes
+                initialStorage={{ shapes: new LiveMap() }}
             >
                 <ClientSideSuspense fallback={
                     <div className="flex h-screen w-screen items-center justify-center bg-[#f8fafc]">

@@ -39,9 +39,17 @@ export async function POST(request: NextRequest) {
     );
 
     // 5. Give them access to the room they are trying to join
-    // (In a real app, you'd check your database to see if they are allowed in this specific room)
-    const { room } = await request.json();
-    liveblocksSession.allow(room, liveblocksSession.FULL_ACCESS);
+    try {
+        const { room } = await request.json();
+
+        // If there's a room requested, give them full access to it
+        if (room) {
+            liveblocksSession.allow(room, liveblocksSession.FULL_ACCESS);
+        }
+    } catch (e) {
+        // If parsing fails, just authorize them globally (Liveblocks handles the rest)
+        console.warn("No room specified in request body");
+    }
 
     // 6. Return the authorization token to the frontend
     const { status, body } = await liveblocksSession.authorize();
