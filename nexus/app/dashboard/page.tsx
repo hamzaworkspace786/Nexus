@@ -10,18 +10,29 @@ import {
     Search,
     Filter,
 } from "lucide-react";
-import { useSession } from "@/lib/auth-client"; // Importing our session hook
+import { useSession } from "@/lib/auth-client";
+// 1. IMPORT THE SERVER ACTION HERE
+import { createBoardInDb } from "@/app/actions/boardActions";
 
 export default function DashboardPage() {
     const router = useRouter();
-    const { data: session } = useSession(); // Grab the logged-in user's data
+    const { data: session } = useSession();
 
-    // Handler to create a new board and redirect the user
-    const handleCreateBoard = () => {
-        // In a real app, you would make an API call to your database here to create the board.
-        // For now, we'll generate a random board ID and push them to that specific whiteboard URL.
-        const newBoardId = Math.random().toString(36).substring(2, 10);
-        router.push(`/whiteboard/${newBoardId}`);
+    // 2. MAKE THE HANDLER ASYNC
+    const handleCreateBoard = async () => {
+        try {
+            // Generate the random board ID
+            const newBoardId = Math.random().toString(36).substring(2, 10);
+
+            // 3. SAVE TO MONGODB FIRST
+            await createBoardInDb(newBoardId);
+
+            // 4. PUSH TO URL
+            router.push(`/whiteboard/${newBoardId}`);
+        } catch (error) {
+            console.error("Failed to create board:", error);
+            alert("Something went wrong creating your board. Please try again.");
+        }
     };
 
     return (
@@ -37,7 +48,6 @@ export default function DashboardPage() {
                         <Link href="/dashboard" className="text-teal-400 font-bold border-b-2 border-teal-500 tracking-tight h-16 flex items-center">
                             Projects
                         </Link>
-                        {/* Updated to link to a generic /whiteboard route */}
                         <button onClick={handleCreateBoard} className="text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all font-medium tracking-tight px-3 py-1 rounded-full">
                             Whiteboard
                         </button>
@@ -45,7 +55,6 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {/* Added onClick handler */}
                     <button
                         onClick={handleCreateBoard}
                         className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-teal-600 to-lime-500 hover:from-teal-500 hover:to-lime-400 text-slate-950 px-6 py-2 rounded-full font-bold active:scale-95 transition-all duration-200 shadow-lg shadow-teal-900/20"
@@ -64,7 +73,6 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-slate-800 ml-2 cursor-pointer active:scale-95 transition-all hover:border-teal-500">
-                        {/* Dynamically pulling in the user's profile image or using a sleek UI Avatar fallback */}
                         <img
                             alt={session?.user?.name || "User Profile"}
                             className="h-full w-full object-cover"
@@ -82,7 +90,6 @@ export default function DashboardPage() {
                 <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div>
                         <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-teal-500 mb-2 block">Workspace Overview</span>
-                        {/* Personalized Greeting */}
                         <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter">
                             Welcome, {session?.user?.name?.split(" ")[0] || "Creator"}
                         </h1>
@@ -105,7 +112,7 @@ export default function DashboardPage() {
                 {/* Bento Grid Layout - Empty State */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
 
-                    {/* Create New Board Card (Added onClick) */}
+                    {/* Create New Board Card */}
                     <button
                         onClick={handleCreateBoard}
                         className="group relative flex flex-col items-center justify-center h-[280px] bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-teal-900/10 hover:scale-[1.02] hover:border-teal-500/50 hover:bg-slate-900/50 focus:outline-none"
@@ -132,7 +139,7 @@ export default function DashboardPage() {
                 <p className="text-[0.6875rem] uppercase tracking-wider text-slate-600">© 2026 Nexus Collaborative. All rights reserved.</p>
             </footer>
 
-            {/* Mobile Floating Action Button (Added onClick) */}
+            {/* Mobile Floating Action Button */}
             <button
                 onClick={handleCreateBoard}
                 className="fixed bottom-8 right-8 bg-gradient-to-r from-teal-600 to-lime-500 text-slate-950 w-14 h-14 rounded-full shadow-lg shadow-teal-900/20 flex items-center justify-center active:scale-95 transition-all md:hidden"

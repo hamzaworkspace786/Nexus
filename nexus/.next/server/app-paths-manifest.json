@@ -1,7 +1,7 @@
 {
-  "/api/auth/[...all]/route": "app/api/auth/[...all]/route.js",
   "/api/liveblocks-auth/route": "app/api/liveblocks-auth/route.js",
-  "/page": "app/page.js",
+  "/api/auth/[...all]/route": "app/api/auth/[...all]/route.js",
+  "/whiteboard/[id]/page": "app/whiteboard/[id]/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/whiteboard/[id]/page": "app/whiteboard/[id]/page.js"
+  "/page": "app/page.js"
 }
