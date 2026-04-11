@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
     ArrowLeft, Mic, Share2, MousePointer2, Pencil, Square, Type,
-    Plus, Undo2, Redo2, HelpCircle, Trash2, StickyNote as StickyIcon
+    Plus, Undo2, Redo2, HelpCircle, Trash2, StickyNote as StickyIcon, Check, X
 } from "lucide-react";
 import { Tldraw, Editor, DefaultColorStyle } from "@tldraw/tldraw";
 import "@tldraw/tldraw/tldraw.css";
@@ -19,13 +19,54 @@ const COLOR_MAP: Record<string, string> = {
     yellow: "#f2c94c", orange: "#f2994a", red: "#eb5757", lightRed: "#ffccd5",
 };
 
-export function Canvas({ roomId }: { roomId: string }) {
+export function Canvas({ roomId, boardName, onBoardNameChange }: { roomId: string; boardName: string; onBoardNameChange: (name: string) => void }) {
     const [editor, setEditor] = useState<Editor | null>(null);
     const [activeTool, setActiveTool] = useState("select");
     const [activeColor, setActiveColor] = useState("black");
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
     const [zoom, setZoom] = useState(100);
+
+    // Inline rename state
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [editingName, setEditingName] = useState(boardName);
+    const nameInputRef = useRef<HTMLInputElement>(null);
+
+    // Keep editingName in sync when boardName prop changes (e.g. after fetch)
+    useEffect(() => {
+        setEditingName(boardName);
+    }, [boardName]);
+
+    // Auto-focus the input when editing starts
+    useEffect(() => {
+        if (isEditingName && nameInputRef.current) {
+            nameInputRef.current.focus();
+            nameInputRef.current.select();
+        }
+    }, [isEditingName]);
+
+    const handleNameSave = useCallback(() => {
+        const trimmed = editingName.trim();
+        const finalName = trimmed || "Untitled Board";
+        setEditingName(finalName);
+        setIsEditingName(false);
+        if (finalName !== boardName) {
+            onBoardNameChange(finalName);
+        }
+    }, [editingName, boardName, onBoardNameChange]);
+
+    const handleNameCancel = useCallback(() => {
+        setEditingName(boardName);
+        setIsEditingName(false);
+    }, [boardName]);
+
+    const handleNameKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            handleNameSave();
+        } else if (e.key === "Escape") {
+            handleNameCancel();
+        }
+    }, [handleNameSave, handleNameCancel]);
 
     // Call our sync hook!
     const storeWithStatus = useYjsStore();
@@ -105,7 +146,28 @@ export function Canvas({ roomId }: { roomId: string }) {
                         <ArrowLeft className="w-5 h-5 text-slate-600" />
                     </Link>
                     <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-900 leading-none">Brainstorm Board</span>
+                        {isEditingName ? (
+                            <div className="flex items-center gap-1.5">
+                                <input
+                                    ref={nameInputRef}
+                                    type="text"
+                                    value={editingName}
+                                    onChange={(e) => setEditingName(e.target.value)}
+                                    onKeyDown={handleNameKeyDown}
+                                    onBlur={handleNameSave}
+                                    className="text-sm font-bold text-slate-900 leading-none bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 w-44 transition-all"
+                                    maxLength={50}
+                                />
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setIsEditingName(true)}
+                                className="text-sm font-bold text-slate-900 leading-none hover:text-teal-600 transition-colors cursor-text text-left"
+                                title="Click to rename"
+                            >
+                                {boardName}
+                            </button>
+                        )}
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">ID: {roomId}</span>
                     </div>
                 </motion.div>
