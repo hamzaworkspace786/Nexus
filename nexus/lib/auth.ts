@@ -2,15 +2,33 @@ import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "@better-auth/mongo-adapter";
 import { MongoClient } from "mongodb";
 
-// No async/await needed! 
-const client = new MongoClient(process.env.MONGODB_URI as string);
-const db = client.db("whiteboard_app");
+const MONGODB_URI = process.env.MONGODB_URI as string;
+
+if (!MONGODB_URI) {
+    throw new Error("Please define the MONGODB_URI environment variable inside .env");
+}
+
+// Cache the MongoClient just like we did with Mongoose!
+let mongoClient: MongoClient;
+
+if (process.env.NODE_ENV === "development") {
+    let globalWithMongo = global as typeof globalThis & {
+        _mongoClient?: MongoClient;
+    };
+
+    if (!globalWithMongo._mongoClient) {
+        globalWithMongo._mongoClient = new MongoClient(MONGODB_URI);
+    }
+    mongoClient = globalWithMongo._mongoClient;
+} else {
+    mongoClient = new MongoClient(MONGODB_URI);
+}
+
+const db = mongoClient.db("whiteboard_app");
 
 export const auth = betterAuth({
-    // --- THIS IS THE FIX ---
     // Forces the server to use HTTP locally, preventing the SSL 80 error
     baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
-    // -----------------------
 
     database: mongodbAdapter(db),
     emailAndPassword: {
