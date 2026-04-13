@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import { Github, Mail, Lock, AlertCircle, Loader2 } from "lucide-react";
+import { Mail, Lock, AlertCircle, Loader2 } from "lucide-react";
 import { signIn } from "@/lib/auth-client"; // Importing our Better Auth hook
 
 export default function LoginPage() {
@@ -36,13 +36,13 @@ export default function LoginPage() {
     };
 
     // Handle Social Logins
-    const handleSocialLogin = async (provider: "google" | "github") => {
+    const handleSocialLogin = async (provider: "google") => {
         setIsLoading(true);
         setError("");
 
         const { data, error: authError } = await signIn.social({
             provider,
-            callbackURL: "/dashboard" // Redirect them here after Google/GitHub finishes
+            callbackURL: "/dashboard"
         });
 
         if (authError) {
@@ -155,14 +155,6 @@ export default function LoginPage() {
                                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                             </svg>
                             Continue with Google
-                        </button>
-                        <button
-                            onClick={() => handleSocialLogin("github")}
-                            disabled={isLoading}
-                            className="flex items-center justify-center gap-3 w-full py-3 px-4 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900 transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <Github className="w-5 h-5" />
-                            Continue with GitHub
                         </button>
                     </div>
 
