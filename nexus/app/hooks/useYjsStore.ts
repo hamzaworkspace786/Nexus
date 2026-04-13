@@ -23,14 +23,13 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
 
     useEffect(() => {
         let unsubs: (() => void)[] = [];
-        let hasConnected = false; // <-- THE FIX: Prevents exponential listener loops
+        let hasConnected = false;
 
         const yDoc = new Y.Doc();
         const yProvider = new LiveblocksYjsProvider(room as any, yDoc);
         const yMap = yDoc.getMap<TLRecord>(`tl_${room.id}`);
 
         yProvider.on("sync", (isSynced: boolean) => {
-            // ONLY run the setup logic once. Ignore subsequent reconnect syncs.
             if (!isSynced || hasConnected) return;
             hasConnected = true;
 
@@ -38,21 +37,26 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
             const records = Array.from(yMap.values());
 
             if (records.length === 0) {
-                // Brand new room: Push local Tldraw defaults to Yjs
                 yDoc.transact(() => {
                     for (const record of store.allRecords()) {
                         yMap.set(record.id, record);
                     }
                 });
             } else {
-                // Existing room: Load Yjs data into Tldraw
                 store.mergeRemoteChanges(() => {
                     store.put(records);
                 });
             }
 
             // --- 2. ONGOING SYNC (YJS -> TLDRAW) ---
-            const handleYMapChange = (event: Y.YMapEvent<TLRecord>) => {
+            const handleYMapChange = (
+                event: Y.YMapEvent<TLRecord>,
+                transaction: Y.Transaction
+            ) => {
+                // CRITICAL FIX: Do not echo local changes back into Tldraw!
+                // Only process changes made by other users.
+                if (transaction.local) return;
+
                 store.mergeRemoteChanges(() => {
                     const toPut: TLRecord[] = [];
                     const toRemove: TLRecord["id"][] = [];
