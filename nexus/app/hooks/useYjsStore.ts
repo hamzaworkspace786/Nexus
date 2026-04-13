@@ -35,7 +35,18 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
             store.mergeRemoteChanges(() => {
                 const initialRecords: TLRecord[] = [];
                 yMap.forEach((record) => initialRecords.push(record));
-                if (initialRecords.length > 0) store.put(initialRecords);
+
+                if (initialRecords.length > 0) {
+                    store.put(initialRecords);
+                } else {
+                    // CRITICAL FIX: If the room is brand new, Yjs is empty.
+                    // We MUST push the default Tldraw document structure into Yjs!
+                    yDoc.transact(() => {
+                        for (const record of store.allRecords()) {
+                            yMap.set(record.id, record);
+                        }
+                    });
+                }
             });
 
             // --- 2. ONGOING SYNC (YJS -> TLDRAW) ---
@@ -69,7 +80,7 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
                         Object.values(entry.changes.removed).forEach((record) => yMap.delete(record.id));
                     });
                 },
-                { scope: "document" } // <-- CRITICAL FIX: Only sync shapes, ignore personal camera/selection data!
+                { scope: "document" }
             );
             unsubs.push(unsubStore);
 
@@ -115,7 +126,7 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
                     yProvider.awareness.setLocalStateField("presence", presenceChanges[0] as any);
                 }
             },
-            { scope: "presence" } // <-- CRITICAL FIX: Only listen to cursor movements here!
+            { scope: "presence" }
         );
         unsubs.push(unsubPresence);
 

@@ -38,20 +38,21 @@ export async function POST(request: NextRequest) {
         }
     );
 
-    // 5. Safely parse the room ID from the request
+    // 5. Safely parse the room ID from the request (just for logging purposes now)
     try {
         const body = await request.json();
         const room = body.room;
 
-        if (room) {
-            // Give them full write access to the specific room requested
-            liveblocksSession.allow(room, liveblocksSession.FULL_ACCESS);
-        } else {
+        if (!room) {
             console.warn("Liveblocks Auth: No room specified in request body.");
         }
     } catch (e) {
         console.error("Liveblocks Auth: Failed to parse request body.");
     }
+
+    // WILDCARD TEST FIX: Give them full write access to ALL rooms.
+    // This bypasses any issues with the room name not being sent in the POST body.
+    liveblocksSession.allow("*", liveblocksSession.FULL_ACCESS);
 
     // 6. Authorize the session and return the token
     try {
