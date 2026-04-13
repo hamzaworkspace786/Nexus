@@ -13,21 +13,34 @@ import {
 export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } = {}) {
     const room = useRoom();
 
-    const [store] = useState(() =>
-        createTLStore({ shapeUtils: opts.shapeUtils || defaultShapeUtils })
-    );
-
     const [storeWithStatus, setStoreWithStatus] = useState<any>({
         status: "loading",
     });
 
     useEffect(() => {
+        if (!room) return;
+
         let isUnmounted = false;
         let unsubs: (() => void)[] = [];
         let hasConnected = false;
 
+        // Reset to loading state immediately when room changes
+        setStoreWithStatus({ status: "loading" });
+
+        // Create a FRESH store for this specific room
+        const store = createTLStore({ shapeUtils: opts.shapeUtils || defaultShapeUtils });
+
         const yDoc = new Y.Doc();
-        const yProvider = new LiveblocksYjsProvider(room as any, yDoc);
+        
+        // Safety check: LiveblocksYjsProvider needs a valid room
+        let yProvider: LiveblocksYjsProvider;
+        try {
+            yProvider = new LiveblocksYjsProvider(room as any, yDoc);
+        } catch (e) {
+            console.error("Failed to create LiveblocksYjsProvider:", e);
+            return;
+        }
+
         const yMap = yDoc.getMap<TLRecord>(`tl_${room.id}`);
 
         yProvider.on("sync", (isSynced: boolean) => {
@@ -59,8 +72,7 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
                     }
                 });
             } else {
-                // Existing room (or React Strict Mode 2nd mount): 
-                // ONLY put safe remote records. We NO LONGER wipe local records first!
+                // Existing room: ONLY put safe remote records.
                 store.mergeRemoteChanges(() => {
                     const safeRecords = records.filter(isSyncable);
                     store.put(safeRecords);
@@ -81,7 +93,6 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
                     event.changes.keys.forEach((change, key) => {
                         if (change.action === "add" || change.action === "update") {
                             const record = yMap.get(key);
-                            // Only accept syncable records from the network
                             if (record && isSyncable(record)) {
                                 toPut.push(record);
                             }
@@ -129,7 +140,6 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
         // --- 4. MULTIPLAYER CURSORS (RECEIVE) ---
         const handleUpdate = () => {
             if (isUnmounted) return;
-            
             const states = yProvider.awareness.getStates();
             const presences: TLInstancePresence[] = [];
 
@@ -173,7 +183,7 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
             yProvider.destroy();
             yDoc.destroy();
         };
-    }, [room, store]);
+    }, [room]); // Only depend on room. Store is local to effect now.
 
     return storeWithStatus;
 }
