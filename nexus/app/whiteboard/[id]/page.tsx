@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect, useCallback } from "react";
+import { use, useState, useEffect, useCallback, useMemo } from "react";
 import { LiveblocksProvider, RoomProvider } from "@liveblocks/react/suspense";
 import { ClientSideSuspense } from "@liveblocks/react";
 import { Canvas } from "@/app/components/Canvas";
@@ -33,12 +33,17 @@ export default function WhiteboardPage({ params }: { params: Promise<{ id: strin
         }
     }, [roomId]);
 
+    // Memoize initialPresence and initialStorage to prevent RoomProvider from reconnecting on re-render
+    // Reconnecting clears the Canvas and destroys the Tldraw store
+    const initialPresence = useMemo(() => ({ cursor: null }), []);
+    const initialStorage = useMemo(() => ({ shapes: new LiveMap() }), []);
+
     return (
         <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
             <RoomProvider
                 id={roomId}
-                initialPresence={{ cursor: null }}
-                initialStorage={{ shapes: new LiveMap() }}
+                initialPresence={initialPresence as any}
+                initialStorage={initialStorage as any}
             >
                 <ClientSideSuspense fallback={
                     <div className="flex h-screen w-screen items-center justify-center bg-[#f8fafc]">

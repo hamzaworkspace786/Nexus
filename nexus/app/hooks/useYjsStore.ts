@@ -22,6 +22,7 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
     });
 
     useEffect(() => {
+        let isUnmounted = false;
         let unsubs: (() => void)[] = [];
         let hasConnected = false;
 
@@ -30,6 +31,7 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
         const yMap = yDoc.getMap<TLRecord>(`tl_${room.id}`);
 
         yProvider.on("sync", (isSynced: boolean) => {
+            if (isUnmounted) return;
             if (!isSynced || hasConnected) return;
             hasConnected = true;
 
@@ -70,7 +72,7 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
                 event: Y.YMapEvent<TLRecord>,
                 transaction: Y.Transaction
             ) => {
-                if (transaction.local) return;
+                if (isUnmounted || transaction.local) return;
 
                 store.mergeRemoteChanges(() => {
                     const toPut: TLRecord[] = [];
@@ -126,6 +128,8 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
 
         // --- 4. MULTIPLAYER CURSORS (RECEIVE) ---
         const handleUpdate = () => {
+            if (isUnmounted) return;
+            
             const states = yProvider.awareness.getStates();
             const presences: TLInstancePresence[] = [];
 
@@ -164,6 +168,7 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
         unsubs.push(unsubPresence);
 
         return () => {
+            isUnmounted = true;
             unsubs.forEach((fn) => fn());
             yProvider.destroy();
             yDoc.destroy();
