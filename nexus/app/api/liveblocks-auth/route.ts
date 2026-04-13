@@ -1,34 +1,34 @@
 import { Liveblocks } from "@liveblocks/node";
 import { NextRequest, NextResponse } from "next/server";
-// Adjust this import path to wherever your server-side auth file is!
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth"; // Ensure this path is correct
+import { headers } from "next/headers"; // Essential for Vercel production
 
-// Initialize Liveblocks with your new dev key
+// 1. Initialize Liveblocks with your Secret Key
 const liveblocks = new Liveblocks({
     secret: process.env.LIVEBLOCKS_SECRET_KEY as string,
 });
 
 export async function POST(request: NextRequest) {
-    // 1. Get the current user's session from Better Auth
+    // 2. Get the current user's session from Better Auth
+    // We use await headers() to ensure cookies are passed correctly on Vercel
     const session = await auth.api.getSession({
-        headers: request.headers,
+        headers: await headers(),
     });
 
-    // 2. If they aren't logged in, kick them out
+    // 3. If they aren't logged in, log it and return 403
     if (!session || !session.user) {
+        console.error("Liveblocks Auth Error: No active Better Auth session found.");
         return new NextResponse("Unauthorized", { status: 403 });
     }
 
     const { user } = session;
 
-    // 3. Create a profile for this user in the Liveblocks room
-    // We can assign them a random cursor color based on their ID length or randomly
+    // 4. Create a profile for this user in the Liveblocks room
     const colors = ["#FF5733", "#33FF57", "#3357FF", "#F333FF", "#33FFF3"];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
-    // 4. Tell Liveblocks who this user is
     const liveblocksSession = liveblocks.prepareSession(
-        user.id, // Their unique database ID
+        user.id,
         {
             userInfo: {
                 name: user.name,
@@ -38,20 +38,27 @@ export async function POST(request: NextRequest) {
         }
     );
 
-    // 5. Give them access to the room they are trying to join
+    // 5. Safely parse the room ID from the request
     try {
-        const { room } = await request.json();
+        const body = await request.json();
+        const room = body.room;
 
-        // If there's a room requested, give them full access to it
         if (room) {
+            // Give them full write access to the specific room requested
             liveblocksSession.allow(room, liveblocksSession.FULL_ACCESS);
+        } else {
+            console.warn("Liveblocks Auth: No room specified in request body.");
         }
     } catch (e) {
-        // If parsing fails, just authorize them globally (Liveblocks handles the rest)
-        console.warn("No room specified in request body");
+        console.error("Liveblocks Auth: Failed to parse request body.");
     }
 
-    // 6. Return the authorization token to the frontend
-    const { status, body } = await liveblocksSession.authorize();
-    return new NextResponse(body, { status });
+    // 6. Authorize the session and return the token
+    try {
+        const { status, body } = await liveblocksSession.authorize();
+        return new NextResponse(body, { status });
+    } catch (error) {
+        console.error("Liveblocks Authorize Error:", error);
+        return new NextResponse("Internal Error", { status: 500 });
+    }
 }
