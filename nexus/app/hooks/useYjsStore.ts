@@ -57,13 +57,11 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
                     }
                 });
             } else {
-                // Existing room: Safely wipe local shapes and load remote shapes
+                // Existing room (or React Strict Mode 2nd mount): 
+                // ONLY put safe remote records. We NO LONGER wipe local records first!
                 store.mergeRemoteChanges(() => {
-                    const recordsToRemove = store.allRecords().filter(isSyncable);
-                    if (recordsToRemove.length > 0) {
-                        store.remove(recordsToRemove.map((r) => r.id));
-                    }
-                    store.put(records);
+                    const safeRecords = records.filter(isSyncable);
+                    store.put(safeRecords);
                 });
             }
 
@@ -76,19 +74,22 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
 
                 store.mergeRemoteChanges(() => {
                     const toPut: TLRecord[] = [];
-                    const toRemove: TLRecord["id"][] = []; // <-- FIX: Changed from TLId<TLRecord>[]
+                    const toRemove: any[] = [];
 
                     event.changes.keys.forEach((change, key) => {
                         if (change.action === "add" || change.action === "update") {
                             const record = yMap.get(key);
-                            if (record) toPut.push(record);
+                            // Only accept syncable records from the network
+                            if (record && isSyncable(record)) {
+                                toPut.push(record);
+                            }
                         } else if (change.action === "delete") {
-                            toRemove.push(key as TLRecord["id"]); // <-- FIX: Changed from as TLId<TLRecord>
+                            toRemove.push(key);
                         }
                     });
 
                     if (toPut.length > 0) store.put(toPut);
-                    if (toRemove.length > 0) store.remove(toRemove);
+                    if (toRemove.length > 0) store.remove(toRemove as any);
                 });
             };
 
