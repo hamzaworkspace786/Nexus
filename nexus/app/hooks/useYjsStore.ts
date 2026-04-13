@@ -33,17 +33,36 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
             if (!isSynced || hasConnected) return;
             hasConnected = true;
 
+            // Strict INCLUSION list: Prevents UI state/camera from poisoning the global Yjs state
+            const isSyncable = (record: TLRecord) => {
+                return [
+                    "document",
+                    "page",
+                    "shape",
+                    "asset",
+                    "binding"
+                ].includes(record.typeName);
+            };
+
             // --- 1. INITIAL SYNC (YJS -> TLDRAW) ---
             const records = Array.from(yMap.values());
 
             if (records.length === 0) {
+                // Brand new room: Push default Tldraw records (filtered)
                 yDoc.transact(() => {
                     for (const record of store.allRecords()) {
-                        yMap.set(record.id, record);
+                        if (isSyncable(record)) {
+                            yMap.set(record.id, record);
+                        }
                     }
                 });
             } else {
+                // Existing room: Safely wipe local shapes and load remote shapes
                 store.mergeRemoteChanges(() => {
+                    const recordsToRemove = store.allRecords().filter(isSyncable);
+                    if (recordsToRemove.length > 0) {
+                        store.remove(recordsToRemove.map((r) => r.id));
+                    }
                     store.put(records);
                 });
             }
@@ -53,20 +72,18 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
                 event: Y.YMapEvent<TLRecord>,
                 transaction: Y.Transaction
             ) => {
-                // CRITICAL FIX: Do not echo local changes back into Tldraw!
-                // Only process changes made by other users.
                 if (transaction.local) return;
 
                 store.mergeRemoteChanges(() => {
                     const toPut: TLRecord[] = [];
-                    const toRemove: TLRecord["id"][] = [];
+                    const toRemove: TLRecord["id"][] = []; // <-- FIX: Changed from TLId<TLRecord>[]
 
                     event.changes.keys.forEach((change, key) => {
                         if (change.action === "add" || change.action === "update") {
                             const record = yMap.get(key);
                             if (record) toPut.push(record);
                         } else if (change.action === "delete") {
-                            toRemove.push(key as TLRecord["id"]);
+                            toRemove.push(key as TLRecord["id"]); // <-- FIX: Changed from as TLId<TLRecord>
                         }
                     });
 
@@ -84,9 +101,15 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
                     if (entry.source !== "user") return;
 
                     yDoc.transact(() => {
-                        Object.values(entry.changes.added).forEach((record) => yMap.set(record.id, record));
-                        Object.values(entry.changes.updated).forEach(([_, record]) => yMap.set(record.id, record));
-                        Object.values(entry.changes.removed).forEach((record) => yMap.delete(record.id));
+                        Object.values(entry.changes.added).forEach((record) => {
+                            if (isSyncable(record)) yMap.set(record.id, record);
+                        });
+                        Object.values(entry.changes.updated).forEach(([_, record]) => {
+                            if (isSyncable(record)) yMap.set(record.id, record);
+                        });
+                        Object.values(entry.changes.removed).forEach((record) => {
+                            if (isSyncable(record)) yMap.delete(record.id);
+                        });
                     });
                 },
                 { scope: "document" }
