@@ -41,6 +41,7 @@ export default function WhiteboardPage({ params }: { params: Promise<{ id: strin
     return (
         <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
             <RoomProvider
+                key={roomId}
                 id={roomId}
                 initialPresence={initialPresence as any}
                 initialStorage={initialStorage as any}
@@ -51,6 +52,7 @@ export default function WhiteboardPage({ params }: { params: Promise<{ id: strin
                     </div>
                 }>
                     <Canvas
+                        key={`canvas-${roomId}`}
                         roomId={roomId}
                         boardName={boardName}
                         onBoardNameChange={handleBoardNameChange}

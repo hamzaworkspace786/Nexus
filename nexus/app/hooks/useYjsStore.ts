@@ -12,124 +12,168 @@ import {
 
 export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } = {}) {
     const room = useRoom();
-    const [storeWithStatus, setStoreWithStatus] = useState<any>({ status: "loading" });
+
+    const [store] = useState(() =>
+        createTLStore({ shapeUtils: opts.shapeUtils || defaultShapeUtils })
+    );
+
+    const [storeWithStatus, setStoreWithStatus] = useState<any>({
+        status: "loading",
+    });
 
     useEffect(() => {
-        if (!room) return;
-
         let isUnmounted = false;
+        let unsubs: (() => void)[] = [];
         let hasConnected = false;
-        const unsubs: (() => void)[] = [];
 
-        // 1. Setup Store and Yjs
-        const store = createTLStore({ shapeUtils: opts.shapeUtils || defaultShapeUtils });
         const yDoc = new Y.Doc();
         const yProvider = new LiveblocksYjsProvider(room as any, yDoc);
         const yMap = yDoc.getMap<TLRecord>(`tl_${room.id}`);
 
-        // Helper to check if a record should be synced
-        const isSyncable = (record: TLRecord) => {
-            return ["document", "page", "shape", "asset", "binding"].includes(record.typeName);
-        };
-
-        // 2. Define the Sync Logic
-        const handleSync = () => {
-            if (isUnmounted || hasConnected) return;
+        yProvider.on("sync", (isSynced: boolean) => {
+            if (isUnmounted) return;
+            if (!isSynced || hasConnected) return;
             hasConnected = true;
 
-            // --- Initial Sync: Yjs -> Tldraw ---
+            // Strict INCLUSION list: Prevents UI state/camera from poisoning the global Yjs state
+            const isSyncable = (record: TLRecord) => {
+                return [
+                    "document",
+                    "page",
+                    "shape",
+                    "asset",
+                    "binding"
+                ].includes(record.typeName);
+            };
+
+            // --- 1. INITIAL SYNC (YJS -> TLDRAW) ---
             const records = Array.from(yMap.values());
+
             if (records.length === 0) {
+                // Brand new room: Push default Tldraw records (filtered)
                 yDoc.transact(() => {
                     for (const record of store.allRecords()) {
-                        if (isSyncable(record)) yMap.set(record.id, record);
+                        if (isSyncable(record)) {
+                            yMap.set(record.id, record);
+                        }
                     }
                 });
             } else {
+                // Existing room (or React Strict Mode 2nd mount): 
+                // ONLY put safe remote records. We NO LONGER wipe local records first!
                 store.mergeRemoteChanges(() => {
-                    store.put(records.filter(isSyncable));
+                    const safeRecords = records.filter(isSyncable);
+                    store.put(safeRecords);
                 });
             }
 
-            // --- Ongoing Sync: Yjs -> Tldraw ---
-            const handleYMapChange = (event: Y.YMapEvent<TLRecord>, transaction: Y.Transaction) => {
-                if (transaction.local) return;
+            // --- 2. ONGOING SYNC (YJS -> TLDRAW) ---
+            const handleYMapChange = (
+                event: Y.YMapEvent<TLRecord>,
+                transaction: Y.Transaction
+            ) => {
+                if (isUnmounted || transaction.local) return;
+
                 store.mergeRemoteChanges(() => {
+                    const toPut: TLRecord[] = [];
+                    const toRemove: any[] = [];
+
                     event.changes.keys.forEach((change, key) => {
                         if (change.action === "add" || change.action === "update") {
                             const record = yMap.get(key);
-                            if (record && isSyncable(record)) store.put([record]);
+                            // Only accept syncable records from the network
+                            if (record && isSyncable(record)) {
+                                toPut.push(record);
+                            }
                         } else if (change.action === "delete") {
-                            store.remove([key as any]);
+                            toRemove.push(key);
                         }
                     });
+
+                    if (toPut.length > 0) store.put(toPut);
+                    if (toRemove.length > 0) store.remove(toRemove as any);
                 });
             };
+
             yMap.observe(handleYMapChange);
             unsubs.push(() => yMap.unobserve(handleYMapChange));
 
-            // --- Local Sync: Tldraw -> Yjs ---
-            const unsubStore = store.listen((entry: any) => {
-                if (entry.source !== "user") return;
-                yDoc.transact(() => {
-                    Object.values(entry.changes.added).forEach((record: any) => {
-                        if (isSyncable(record)) yMap.set(record.id, record);
+            // --- 3. LOCAL SYNC (TLDRAW -> YJS) ---
+            const unsubStore = store.listen(
+                (entry) => {
+                    if (entry.source !== "user") return;
+
+                    yDoc.transact(() => {
+                        Object.values(entry.changes.added).forEach((record) => {
+                            if (isSyncable(record)) yMap.set(record.id, record);
+                        });
+                        Object.values(entry.changes.updated).forEach(([_, record]) => {
+                            if (isSyncable(record)) yMap.set(record.id, record);
+                        });
+                        Object.values(entry.changes.removed).forEach((record) => {
+                            if (isSyncable(record)) yMap.delete(record.id);
+                        });
                     });
-                    Object.values(entry.changes.updated).forEach(([_, record]: any) => {
-                        if (isSyncable(record)) yMap.set(record.id, record);
-                    });
-                    Object.values(entry.changes.removed).forEach((record: any) => {
-                        if (isSyncable(record)) yMap.delete(record.id);
-                    });
-                });
-            }, { scope: "document" });
+                },
+                { scope: "document" }
+            );
             unsubs.push(unsubStore);
 
-            // Update UI
-            setStoreWithStatus({ status: "synced-remote", store });
-        };
-
-        // 3. Define Presence Logic (Cursors)
-        const handleUpdate = () => {
-            if (isUnmounted) return;
-            const states = yProvider.awareness.getStates();
-            const presences: TLInstancePresence[] = [];
-            states.forEach((state: any, clientId: number) => {
-                if (state.presence && clientId !== yDoc.clientID) presences.push(state.presence);
+            setStoreWithStatus({
+                status: "synced-remote",
+                connectionStatus: "online",
+                store,
             });
-            if (presences.length > 0) {
-                store.mergeRemoteChanges(() => store.put(presences));
-            }
-        };
-
-        const unsubPresence = store.listen((entry: any) => {
-            if (entry.source !== "user") return;
-            const presenceChanges = [...Object.values(entry.changes.added), ...Object.values(entry.changes.updated).map(([_, record]: any) => record)]
-                .filter((r: any) => r.typeName === "instance_presence") as TLInstancePresence[];
-            if (presenceChanges.length > 0) {
-                yProvider.awareness.setLocalStateField("presence", presenceChanges[0] as any);
-            }
-        }, { scope: "presence" });
-
-        // 4. Attach Listeners
-        yProvider.on("sync", handleSync);
-        yProvider.awareness.on("update", handleUpdate);
-        unsubs.push(unsubPresence);
-        unsubs.push(() => {
-            yProvider.off("sync", handleSync);
-            yProvider.awareness.off("update", handleUpdate);
         });
 
-        if (yProvider.synced) handleSync();
+        // --- 4. MULTIPLAYER CURSORS (RECEIVE) ---
+        const handleUpdate = () => {
+            if (isUnmounted) return;
+            
+            const states = yProvider.awareness.getStates();
+            const presences: TLInstancePresence[] = [];
+
+            states.forEach((state: any, clientId: number) => {
+                if (state.presence && clientId !== yDoc.clientID) {
+                    presences.push(state.presence);
+                }
+            });
+
+            if (presences.length > 0) {
+                store.mergeRemoteChanges(() => {
+                    store.put(presences);
+                });
+            }
+        };
+
+        yProvider.awareness.on("update", handleUpdate);
+        unsubs.push(() => yProvider.awareness.off("update", handleUpdate));
+
+        // --- 5. MULTIPLAYER CURSORS (BROADCAST) ---
+        const unsubPresence = store.listen(
+            (entry) => {
+                if (entry.source !== "user") return;
+
+                const presenceChanges = [
+                    ...Object.values(entry.changes.added),
+                    ...Object.values(entry.changes.updated).map(([_, record]) => record),
+                ].filter((record) => record.typeName === "instance_presence") as TLInstancePresence[];
+
+                if (presenceChanges.length > 0) {
+                    yProvider.awareness.setLocalStateField("presence", presenceChanges[0] as any);
+                }
+            },
+            { scope: "presence" }
+        );
+        unsubs.push(unsubPresence);
 
         return () => {
             isUnmounted = true;
-            unsubs.forEach(fn => fn());
+            unsubs.forEach((fn) => fn());
             yProvider.destroy();
             yDoc.destroy();
-            setStoreWithStatus({ status: "loading" });
         };
-    }, [room]);
+    }, [room, store]);
 
     return storeWithStatus;
 }
