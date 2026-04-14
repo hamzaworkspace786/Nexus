@@ -33,7 +33,7 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
         const yDoc = yProvider.getYDoc();
         const yMap = yDoc.getMap<TLRecord>(`tl_${room.id}`);
 
-        yProvider.on("sync", (isSynced: boolean) => {
+        const handleSync = (isSynced: boolean) => {
             if (isUnmounted) return;
             if (!isSynced || hasConnected) return;
             hasConnected = true;
@@ -127,7 +127,17 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
                 connectionStatus: "online",
                 store,
             });
-        });
+        };
+
+        yProvider.on("sync", handleSync);
+        unsubs.push(() => yProvider.off("sync", handleSync));
+        
+        // Critically important for React Strict Mode or fast re-renders:
+        // By the time this effect re-runs, the provider might already be synced natively!
+        // We must check if it's already synced to prevent the app from freezing.
+        if (yProvider.synced) {
+            handleSync(true);
+        }
 
         // --- 4. MULTIPLAYER CURSORS (RECEIVE) ---
         const handleUpdate = () => {
@@ -174,7 +184,7 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
             isUnmounted = true;
             unsubs.forEach((fn) => fn());
         };
-    }, [room, store]);
+    }, [client, roomId, store]);
 
     return storeWithStatus;
 }
