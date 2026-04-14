@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useRoom } from "@liveblocks/react/suspense";
+import { useClient } from "@liveblocks/react/suspense";
 import { getYjsProviderForRoom } from "@liveblocks/yjs";
 import * as Y from "yjs";
 import {
@@ -10,8 +10,9 @@ import {
     TLAnyShapeUtilConstructor
 } from "@tldraw/tldraw";
 
-export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } = {}) {
-    const room = useRoom();
+export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } = {}) {
+    const client = useClient();
+    const room = client.getRoom(roomId);
 
     const [store] = useState(() =>
         createTLStore({ shapeUtils: opts.shapeUtils || defaultShapeUtils })
@@ -22,6 +23,8 @@ export function useYjsStore(opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } =
     });
 
     useEffect(() => {
+        if (!room) return;
+        
         let isUnmounted = false;
         let unsubs: (() => void)[] = [];
         let hasConnected = false;

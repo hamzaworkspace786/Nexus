@@ -68,8 +68,8 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: { roomId: strin
         }
     }, [handleNameSave, handleNameCancel]);
 
-    // Call our sync hook!
-    const storeWithStatus = useYjsStore();
+    // Use our custom Yjs store hook and pass the roomId explicitly
+    const storeWithStatus = useYjsStore(roomId);
 
     useEffect(() => {
         if (!editor) return;
