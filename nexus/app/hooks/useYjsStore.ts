@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useClient } from "@liveblocks/react/suspense";
-import { getYjsProviderForRoom } from "@liveblocks/yjs";
+import { LiveblocksYjsProvider } from "@liveblocks/yjs"; // <-- Changed this import
 import * as Y from "yjs";
 import {
     createTLStore,
@@ -24,13 +24,14 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
 
     useEffect(() => {
         if (!room) return;
-        
+
         let isUnmounted = false;
         let unsubs: (() => void)[] = [];
         let hasConnected = false;
 
-        const yProvider = getYjsProviderForRoom(room as any);
-        const yDoc = yProvider.getYDoc();
+        // 1. Create a FRESH Doc and Provider per mount (Fixes the vanishing drawing bug)
+        const yDoc = new Y.Doc();
+        const yProvider = new LiveblocksYjsProvider(room as any, yDoc);
         const yMap = yDoc.getMap<TLRecord>(`tl_${room.id}`);
 
         const handleSync = (isSynced: boolean) => {
@@ -38,7 +39,6 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
             if (!isSynced || hasConnected) return;
             hasConnected = true;
 
-            // Strict INCLUSION list: Prevents UI state/camera from poisoning the global Yjs state
             const isSyncable = (record: TLRecord) => {
                 return [
                     "document",
@@ -49,11 +49,9 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
                 ].includes(record.typeName);
             };
 
-            // --- 1. INITIAL SYNC (YJS -> TLDRAW) ---
             const records = Array.from(yMap.values());
 
             if (records.length === 0) {
-                // Brand new room: Push default Tldraw records (filtered)
                 yDoc.transact(() => {
                     for (const record of store.allRecords()) {
                         if (isSyncable(record)) {
@@ -62,15 +60,12 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
                     }
                 });
             } else {
-                // Existing room (or React Strict Mode 2nd mount): 
-                // ONLY put safe remote records. We NO LONGER wipe local records first!
                 store.mergeRemoteChanges(() => {
                     const safeRecords = records.filter(isSyncable);
                     store.put(safeRecords);
                 });
             }
 
-            // --- 2. ONGOING SYNC (YJS -> TLDRAW) ---
             const handleYMapChange = (
                 event: Y.YMapEvent<TLRecord>,
                 transaction: Y.Transaction
@@ -84,7 +79,6 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
                     event.changes.keys.forEach((change, key) => {
                         if (change.action === "add" || change.action === "update") {
                             const record = yMap.get(key);
-                            // Only accept syncable records from the network
                             if (record && isSyncable(record)) {
                                 toPut.push(record);
                             }
@@ -101,7 +95,6 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
             yMap.observe(handleYMapChange);
             unsubs.push(() => yMap.unobserve(handleYMapChange));
 
-            // --- 3. LOCAL SYNC (TLDRAW -> YJS) ---
             const unsubStore = store.listen(
                 (entry) => {
                     if (entry.source !== "user") return;
@@ -131,18 +124,14 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
 
         yProvider.on("sync", handleSync);
         unsubs.push(() => yProvider.off("sync", handleSync));
-        
-        // Critically important for React Strict Mode or fast re-renders:
-        // By the time this effect re-runs, the provider might already be synced natively!
-        // We must check if it's already synced to prevent the app from freezing.
+
         if (yProvider.synced) {
             handleSync(true);
         }
 
-        // --- 4. MULTIPLAYER CURSORS (RECEIVE) ---
         const handleUpdate = () => {
             if (isUnmounted) return;
-            
+
             const states = yProvider.awareness.getStates();
             const presences: TLInstancePresence[] = [];
 
@@ -162,7 +151,6 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
         yProvider.awareness.on("update", handleUpdate);
         unsubs.push(() => yProvider.awareness.off("update", handleUpdate));
 
-        // --- 5. MULTIPLAYER CURSORS (BROADCAST) ---
         const unsubPresence = store.listen(
             (entry) => {
                 if (entry.source !== "user") return;
@@ -183,8 +171,11 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
         return () => {
             isUnmounted = true;
             unsubs.forEach((fn) => fn());
+            // 2. Properly destroy the connections on unmount so ghost data doesn't persist
+            yProvider.destroy();
+            yDoc.destroy();
         };
-    }, [client, roomId, store]);
+    }, [client, roomId, store, room]);
 
     return storeWithStatus;
 }
