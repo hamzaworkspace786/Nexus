@@ -172,7 +172,7 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
             yProvider.destroy();
             yDoc.destroy();
         };
-    }, [room, store]);
+    }, [room.id, store]);
 
     return storeWithStatus;
 }
