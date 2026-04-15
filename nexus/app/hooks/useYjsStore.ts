@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useClient } from "@liveblocks/react/suspense";
-import { LiveblocksYjsProvider } from "@liveblocks/yjs"; // <-- Changed this import
+import { useRoom } from "@liveblocks/react/suspense";
+import { LiveblocksYjsProvider } from "@liveblocks/yjs";
 import * as Y from "yjs";
 import {
     createTLStore,
@@ -11,8 +11,7 @@ import {
 } from "@tldraw/tldraw";
 
 export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilConstructor[] } = {}) {
-    const client = useClient();
-    const room = client.getRoom(roomId);
+    const room = useRoom(); // ← reactive, always has the room from RoomProvider context
 
     const [store] = useState(() =>
         createTLStore({ shapeUtils: opts.shapeUtils || defaultShapeUtils })
@@ -29,7 +28,6 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
         let unsubs: (() => void)[] = [];
         let hasConnected = false;
 
-        // 1. Create a FRESH Doc and Provider per mount (Fixes the vanishing drawing bug)
         const yDoc = new Y.Doc();
         const yProvider = new LiveblocksYjsProvider(room as any, yDoc);
         const yMap = yDoc.getMap<TLRecord>(`tl_${room.id}`);
@@ -171,11 +169,10 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
         return () => {
             isUnmounted = true;
             unsubs.forEach((fn) => fn());
-            // 2. Properly destroy the connections on unmount so ghost data doesn't persist
             yProvider.destroy();
             yDoc.destroy();
         };
-    }, [client, roomId, store, room]);
+    }, [room, store]);
 
     return storeWithStatus;
-} 
+}
