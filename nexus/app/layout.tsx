@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { LiveblocksProvider } from "@liveblocks/react/suspense";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -17,7 +18,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="light" data-scroll-behavior="smooth">
       <body className={`${inter.variable} font-sans antialiased selection:bg-primary-container`}>
-        {children}
+        <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
+          {children}
+        </LiveblocksProvider>
       </body>
     </html>
   );
