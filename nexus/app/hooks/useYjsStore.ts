@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useClient } from "@liveblocks/react/suspense";
-import { LiveblocksYjsProvider } from "@liveblocks/yjs"; // <-- Changed this import
+import { LiveblocksYjsProvider } from "@liveblocks/yjs";
 import * as Y from "yjs";
 import {
     createTLStore,
@@ -22,6 +22,14 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
         status: "loading",
     });
 
+    // 1. THE FIX: Create the Y.Doc and Provider exactly ONCE per room using useState.
+    // This makes them completely immune to React re-renders.
+    const [{ yDoc, yProvider }] = useState(() => {
+        const doc = new Y.Doc();
+        const provider = new LiveblocksYjsProvider(room as any, doc);
+        return { yDoc: doc, yProvider: provider };
+    });
+
     useEffect(() => {
         if (!room) return;
 
@@ -29,9 +37,7 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
         let unsubs: (() => void)[] = [];
         let hasConnected = false;
 
-        // 1. Create a FRESH Doc and Provider per mount (Fixes the vanishing drawing bug)
-        const yDoc = new Y.Doc();
-        const yProvider = new LiveblocksYjsProvider(room as any, yDoc);
+        // Use the yDoc we safely created in useState above
         const yMap = yDoc.getMap<TLRecord>(`tl_${room.id}`);
 
         const handleSync = (isSynced: boolean) => {
@@ -171,11 +177,18 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
         return () => {
             isUnmounted = true;
             unsubs.forEach((fn) => fn());
-            // 2. Properly destroy the connections on unmount so ghost data doesn't persist
+            // 2. THE FIX: Removed yDoc.destroy() from here so re-renders don't kill the room!
+        };
+    }, [client, roomId, store, room, yDoc, yProvider]);
+
+    // 3. THE FIX: Dedicated cleanup effect. 
+    // The empty array [] means this ONLY runs when the user completely leaves the page/board.
+    useEffect(() => {
+        return () => {
             yProvider.destroy();
             yDoc.destroy();
         };
-    }, [client, roomId, store, room]);
+    }, [yDoc, yProvider]);
 
     return storeWithStatus;
 }
