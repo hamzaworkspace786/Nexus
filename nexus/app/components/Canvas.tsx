@@ -136,6 +136,7 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: { roomId: strin
                         store={storeWithStatus.store}
                         hideUi={true}
                         onMount={(editor) => setEditor(editor)}
+                        licenseKey={process.env.NEXT_PUBLIC_TLDRAW_LICENSE_KEY}
                     />
                 )}
             </div>
