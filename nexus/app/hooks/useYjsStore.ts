@@ -23,7 +23,6 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
 
     useEffect(() => {
         if (!room) return;
-        console.log("🟢 Yjs effect STARTED", room.id); // log 1
         let isUnmounted = false;
         let unsubs: (() => void)[] = [];
         let hasConnected = false;
@@ -167,7 +166,6 @@ export function useYjsStore(roomId: string, opts: { shapeUtils?: TLAnyShapeUtilC
         unsubs.push(unsubPresence);
 
         return () => {
-            console.log("🔴 Yjs effect CLEANUP - connection destroyed", room.id); // log 2
             isUnmounted = true;
             unsubs.forEach((fn) => fn());
             yProvider.destroy();

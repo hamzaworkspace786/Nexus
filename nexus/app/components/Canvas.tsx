@@ -20,7 +20,6 @@ const COLOR_MAP: Record<string, string> = {
 };
 
 export function Canvas({ roomId, boardName, onBoardNameChange }: { roomId: string; boardName: string; onBoardNameChange: (name: string) => void }) {
-    console.log("🔄 Canvas RENDERED", { roomId, boardName }); // log 3
     const [editor, setEditor] = useState<Editor | null>(null);
     const [activeTool, setActiveTool] = useState("select");
     const [activeColor, setActiveColor] = useState("black");
