@@ -12,6 +12,11 @@ import {
     LayoutDashboard,
     Clock,
     Loader2,
+    X,
+    Rocket,
+    Zap,
+    Users,
+    ChevronRight,
 } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
 import { createBoardInDb, getUserBoards } from "@/app/actions/boardActions";
@@ -32,6 +37,7 @@ export default function DashboardPage() {
     const [isLoadingBoards, setIsLoadingBoards] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [isCreating, setIsCreating] = useState(false);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
 
     // Fetch all boards on mount
     useEffect(() => {
@@ -126,21 +132,23 @@ export default function DashboardPage() {
                     </button>
 
                     <div className="flex items-center gap-2">
-                        <button className="p-2 text-slate-400 hover:text-slate-200 hover:bg-white/5 rounded-full transition-all active:scale-95">
-                            <Bell className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 text-slate-400 hover:text-slate-200 hover:bg-white/5 rounded-full transition-all active:scale-95">
+                        <button
+                            onClick={() => setIsHelpOpen(true)}
+                            className="p-2 text-slate-400 hover:text-slate-200 hover:bg-white/5 rounded-full transition-all active:scale-95"
+                        >
                             <HelpCircle className="w-5 h-5" />
                         </button>
                     </div>
 
                     <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-slate-800 ml-2 cursor-pointer active:scale-95 transition-all hover:border-teal-500">
-                        <img
-                            alt={session?.user?.name || "User Profile"}
-                            className="h-full w-full object-cover"
-                            src={session?.user?.image || `https://ui-avatars.com/api/?name=${session?.user?.name || 'User'}&background=0D8B93&color=fff`}
-                            referrerPolicy="no-referrer"
-                        />
+                        <Link href="/settings">
+                            <img
+                                alt={session?.user?.name || "User Profile"}
+                                className="h-full w-full object-cover"
+                                src={session?.user?.image || `https://ui-avatars.com/api/?name=${session?.user?.name || 'User'}&background=0D8B93&color=fff`}
+                                referrerPolicy="no-referrer"
+                            />
+                        </Link>
                     </div>
                 </div>
             </nav>
@@ -167,9 +175,6 @@ export default function DashboardPage() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <button className="p-3 bg-slate-900/50 border border-slate-800 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all">
-                            <Filter className="w-5 h-5" />
-                        </button>
                     </div>
                 </header>
 
@@ -294,6 +299,99 @@ export default function DashboardPage() {
                     <Plus className="w-8 h-8" />
                 )}
             </button>
+
+            {/* Help Modal */}
+            {isHelpOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-slate-950/60 backdrop-blur-md transition-opacity duration-300"
+                        onClick={() => setIsHelpOpen(false)}
+                    />
+
+                    {/* Modal Content */}
+                    <div className="relative bg-slate-900/90 border border-slate-700/50 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300">
+                        {/* Header */}
+                        <div className="p-8 border-b border-slate-800/50 flex justify-between items-center bg-gradient-to-br from-slate-900 to-slate-950">
+                            <div>
+                                <h2 className="text-2xl font-black text-white flex items-center gap-3">
+                                    <div className="p-2 bg-teal-500/10 rounded-xl text-teal-400">
+                                        <Rocket className="w-6 h-6" />
+                                    </div>
+                                    Welcome to Nexus
+                                </h2>
+                                <p className="text-slate-400 text-sm mt-1">Your collaborative creative workspace</p>
+                            </div>
+                            <button
+                                onClick={() => setIsHelpOpen(false)}
+                                className="p-2 text-slate-500 hover:text-white hover:bg-white/5 rounded-full transition-colors"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-8 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                            {/* Feature 1 */}
+                            <div className="flex gap-5 group">
+                                <div className="shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500/20 to-teal-500/5 flex items-center justify-center border border-teal-500/20 group-hover:border-teal-500/40 transition-colors">
+                                    <Plus className="w-6 h-6 text-teal-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white mb-2">Create New Boards</h3>
+                                    <p className="text-slate-400 leading-relaxed text-sm">
+                                        Click the <strong className="text-teal-400">New Board</strong> button or the dashed card in your grid to start a fresh canvas. Every board has a unique ID you can share.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Feature 2 */}
+                            <div className="flex gap-5 group">
+                                <div className="shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-lime-500/20 to-lime-500/5 flex items-center justify-center border border-lime-500/20 group-hover:border-lime-500/40 transition-colors">
+                                    <Search className="w-6 h-6 text-lime-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white mb-2">Organize Your Work</h3>
+                                    <p className="text-slate-400 leading-relaxed text-sm">
+                                        Use the search bar at the top to filter through your projects. Nexus automatically saves your progress so you can pick up exactly where you left off.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Feature 3 */}
+                            <div className="flex gap-5 group">
+                                <div className="shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500/20 to-lime-500/5 flex items-center justify-center border border-teal-500/20 group-hover:border-lime-500/40 transition-colors">
+                                    <Users className="w-6 h-6 text-teal-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white mb-2">Real-time Collaboration</h3>
+                                    <p className="text-slate-400 leading-relaxed text-sm">
+                                        Invite team members to your board. Multiple people can draw, write, and ideate simultaneously with zero lag.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Beginner Tip */}
+                            <div className="p-4 rounded-2xl bg-teal-500/5 border border-teal-500/10 flex items-start gap-4">
+                                <Zap className="w-5 h-5 text-teal-400 shrink-0 mt-0.5" />
+                                <div className="text-xs text-teal-300/80 italic leading-relaxed">
+                                    <strong className="text-teal-400 not-italic">Pro Tip:</strong> You can rename your boards directly from the whiteboard view to keep your workspace tidy!
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 bg-slate-900 border-t border-slate-800/50 flex justify-end">
+                            <button
+                                onClick={() => setIsHelpOpen(false)}
+                                className="bg-gradient-to-r from-teal-600 to-lime-500 hover:from-teal-500 hover:to-lime-400 text-slate-950 px-8 py-3 rounded-xl font-bold transition-all active:scale-95 shadow-lg shadow-teal-900/20"
+                            >
+                                Got it, let's go!
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );
