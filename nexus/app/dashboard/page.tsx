@@ -279,11 +279,6 @@ export default function DashboardPage() {
 
             {/* Footer */}
             <footer className="w-full py-8 border-t border-slate-900 bg-slate-950 flex flex-col items-center gap-4 mt-auto">
-                <div className="flex gap-8">
-                    <Link href="#" className="text-[0.6875rem] uppercase tracking-wider text-slate-500 hover:text-teal-400 underline-offset-4 hover:underline transition-colors">Privacy Policy</Link>
-                    <Link href="#" className="text-[0.6875rem] uppercase tracking-wider text-slate-500 hover:text-teal-400 underline-offset-4 hover:underline transition-colors">Terms of Service</Link>
-                    <Link href="#" className="text-[0.6875rem] uppercase tracking-wider text-slate-500 hover:text-teal-400 underline-offset-4 hover:underline transition-colors">Support</Link>
-                </div>
                 <p className="text-[0.6875rem] uppercase tracking-wider text-slate-600">© 2026 Nexus Collaborative. All rights reserved.</p>
             </footer>
 

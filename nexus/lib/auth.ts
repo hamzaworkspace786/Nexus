@@ -24,7 +24,7 @@ if (process.env.NODE_ENV === "development") {
     mongoClient = new MongoClient(MONGODB_URI);
 }
 
-const db = mongoClient.db("whiteboard_app");
+export const db = mongoClient.db("whiteboard_app");
 
 export const auth = betterAuth({
     // Forces the server to use HTTP locally, preventing the SSL 80 error
@@ -39,6 +39,15 @@ export const auth = betterAuth({
         google: {
             clientId: process.env.GOOGLE_CLIENT_ID as string,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+        }
+    },
+    user: {
+        additionalFields: {
+            bio: {
+                type: "string",
+                required: false,
+                defaultValue: ""
+            }
         }
     }
 });
