@@ -393,10 +393,16 @@ export function useVoiceChat() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    sampleRate: 44100,
-                },
+                    echoCancellation: { ideal: true },
+                    noiseSuppression: { ideal: true },
+                    autoGainControl: { ideal: true },
+                    // Chromium specific extensions (using 'as any' to bypass TS check for non-standard flags)
+                    googEchoCancellation: { ideal: true },
+                    googAutoGainControl: { ideal: true },
+                    googNoiseSuppression: { ideal: true },
+                    googHighpassFilter: { ideal: true },
+                    channelCount: { ideal: 1 },
+                } as any,
                 video: false,
             });
 
