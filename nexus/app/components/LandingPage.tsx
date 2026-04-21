@@ -77,7 +77,7 @@ const Hero = () => {
                     className="inline-flex items-center gap-2 bg-secondary-container/30 px-4 py-1.5 rounded-full border border-secondary-fixed-dim/20"
                 >
                     <span className="w-2 h-2 rounded-full bg-secondary"></span>
-                    <span className="text-secondary font-bold text-[0.6875rem] tracking-wider uppercase">New: Google Meet Integration</span>
+                    <span className="text-secondary font-bold text-[0.6875rem] tracking-wider uppercase">New: Crystal Clear Voice Chat</span>
                 </motion.div>
 
                 <motion.h1
@@ -86,7 +86,7 @@ const Hero = () => {
                     transition={{ delay: 0.1 }}
                     className="text-5xl lg:text-7xl font-black text-on-background tracking-tighter leading-[1.05]"
                 >
-                    Nexus: The Collaborative Whiteboard with <span className="text-primary italic">Built-in</span> Google Meet Voice.
+                    Nexus: The Collaborative Whiteboard with <span className="text-primary italic">Built-in</span> Real-time Voice.
                 </motion.h1>
 
                 <motion.p
@@ -95,7 +95,7 @@ const Hero = () => {
                     transition={{ delay: 0.2 }}
                     className="text-lg lg:text-xl text-on-surface-variant leading-relaxed max-w-xl"
                 >
-                    Define ideas, align on decisions, and talk effortlessly—all in one unified workspace. Nexus combines frictionless whiteboard collaboration with native Meet audio.
+                    Define ideas, align on decisions, and talk effortlessly—all in one unified workspace. Nexus combines frictionless whiteboard collaboration with native high-fidelity audio.
                 </motion.p>
 
                 <motion.div
@@ -238,7 +238,7 @@ const WhiteboardPreview = () => {
                         <div className="bg-slate-900 px-6 py-3 rounded-full flex items-center gap-6 shadow-2xl">
                             <div className="flex items-center gap-3 text-white border-r border-slate-700 pr-6">
                                 <div className="w-5 h-5 bg-blue-500 rounded-sm flex items-center justify-center text-[10px] font-bold">M</div>
-                                <span className="text-sm font-medium">Google Meet Call</span>
+                                <span className="text-sm font-medium">Live Voice Chat</span>
                             </div>
                             <div className="flex items-center gap-4">
                                 <button className="p-2 text-white hover:bg-slate-800 rounded-full"><Mic className="w-4 h-4" /></button>
@@ -264,7 +264,7 @@ const Features = () => {
                 <div className="md:col-span-8 bg-surface-container-low rounded-xl p-10 flex flex-col justify-between group overflow-hidden relative min-h-[350px]">
                     <div className="z-10">
                         <h3 className="text-3xl font-bold mb-4">Voice-Integrated Canvasing</h3>
-                        <p className="text-on-surface-variant max-w-md">No more tab-switching. Use Google Meet audio natively inside your whiteboard to keep the momentum going.</p>
+                        <p className="text-on-surface-variant max-w-md">No more tab-switching. Use high-fidelity native audio inside your whiteboard to keep the momentum going.</p>
                     </div>
                     <img
                         alt="Voice collaboration visual"

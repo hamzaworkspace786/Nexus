@@ -15,6 +15,7 @@ export type VoiceParticipant = {
     userId: string;
     userName: string;
     userColor: string;
+    userImage: string;
     isMuted: boolean;
     isSpeaking: boolean;
 };
@@ -246,6 +247,7 @@ export function useVoiceChat() {
                     userId: event.userId,
                     userName: event.userName,
                     userColor: event.userColor,
+                    userImage: event.userImage,
                     isMuted: event.isMuted,
                     isSpeaking: false,
                 }];
@@ -278,6 +280,7 @@ export function useVoiceChat() {
                     userId: event.userId,
                     userName: event.userName,
                     userColor: event.userColor,
+                    userImage: event.userImage,
                     isMuted: false,
                     isSpeaking: false,
                 }];
@@ -291,6 +294,7 @@ export function useVoiceChat() {
                     userId: self.id,
                     userName: self.info?.name ?? "Anonymous",
                     userColor: self.info?.color ?? "#58a6ff",
+                    userImage: self.info?.picture ?? "",
                     isMuted: isMutedRef.current,
                 });
             }
@@ -408,6 +412,7 @@ export function useVoiceChat() {
                 userId: self.id,
                 userName: self.info?.name ?? "Anonymous",
                 userColor: self.info?.color ?? "#58a6ff",
+                userImage: self.info?.picture ?? "",
                 isMuted: false,
                 isSpeaking: false,
             }]);
@@ -418,6 +423,7 @@ export function useVoiceChat() {
                 userId: self.id,
                 userName: self.info?.name ?? "Anonymous",
                 userColor: self.info?.color ?? "#58a6ff",
+                userImage: self.info?.picture ?? "",
             });
 
         } catch (err: any) {

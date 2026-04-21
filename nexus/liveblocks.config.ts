@@ -37,9 +37,9 @@ export type JsonIceCandidate = {
 export type RoomEvent =
     | { type: "reaction"; emoji: string }
     // ── Voice signaling ──────────────────────────────────
-    | { type: "voice:join"; userId: string; userName: string; userColor: string }
+    | { type: "voice:join"; userId: string; userName: string; userColor: string; userImage: string }
     | { type: "voice:leave"; userId: string }
-    | { type: "voice:already-here"; userId: string; userName: string; userColor: string; isMuted: boolean }
+    | { type: "voice:already-here"; userId: string; userName: string; userColor: string; userImage: string; isMuted: boolean }
     | { type: "voice:mute-state"; userId: string; isMuted: boolean }
     | { type: "voice:speaking"; userId: string; isSpeaking: boolean }
     // WebRTC handshake (plain JSON, not browser interfaces)

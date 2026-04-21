@@ -12,6 +12,7 @@ import { Tldraw, Editor, DefaultColorStyle } from "@tldraw/tldraw";
 import "@tldraw/tldraw/tldraw.css";
 import { useYjsStore } from "@/app/hooks/useYjsStore";
 import { useVoiceChat, VoiceParticipant } from "@/app/hooks/useVoiceChat";
+import { useSelf } from "@liveblocks/react/suspense";
 
 const cn = (...classes: (string | boolean | undefined)[]) =>
     classes.filter(Boolean).join(" ");
@@ -166,10 +167,14 @@ function VoicePanel({ participants, isMuted, isSpeaking, onToggleMute, onLeave }
                             {/* Colour dot avatar */}
                             <div className="relative">
                                 <div
-                                    className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                                    className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 overflow-hidden"
                                     style={{ backgroundColor: p.userColor }}
                                 >
-                                    {p.userName[0]?.toUpperCase()}
+                                    {p.userImage ? (
+                                        <img src={p.userImage} alt={p.userName} className="h-full w-full object-cover" />
+                                    ) : (
+                                        p.userName[0]?.toUpperCase()
+                                    )}
                                 </div>
                                 {/* Speaking ring */}
                                 {p.isSpeaking && !p.isMuted && (
@@ -253,6 +258,7 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: {
     const [editingName, setEditingName] = useState(boardName);
     const [shareOpen, setShareOpen] = useState(false);
     const nameInputRef = useRef<HTMLInputElement>(null);
+    const self = useSelf();
 
     // ── Voice chat hook ─────────────────────────────────
     const {
@@ -378,8 +384,12 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: {
                     className="pointer-events-auto flex items-center gap-2 bg-white p-1.5 rounded-full shadow-xl shadow-slate-200/50 border border-slate-100">
                     <div className="flex items-center gap-3 px-3">
                         <Link href="/settings">
-                            <div className="w-8 h-8 rounded-full border-2 border-teal-200 bg-gradient-to-br from-teal-500 to-lime-400 flex items-center justify-center text-[10px] font-bold text-slate-900 shadow-sm cursor-pointer hover:opacity-80 transition-opacity">
-                                YOU
+                            <div className="w-8 h-8 rounded-full border-2 border-teal-200 bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-900 shadow-sm cursor-pointer hover:opacity-80 transition-opacity overflow-hidden">
+                                {self.info?.picture ? (
+                                    <img src={self.info.picture} alt="YOU" className="h-full w-full object-cover" />
+                                ) : (
+                                    "YOU"
+                                )}
                             </div>
                         </Link>
                         <div className="h-6 w-px bg-slate-100" />
@@ -412,11 +422,15 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: {
                             <div className="flex -space-x-1.5">
                                 {participants.slice(0, 3).map(p => (
                                     <div key={p.userId}
-                                        className="h-5 w-5 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white shrink-0"
+                                        className="h-5 w-5 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white shrink-0 overflow-hidden"
                                         style={{ backgroundColor: p.userColor }}
                                         title={p.userName}
                                     >
-                                        {p.userName[0]?.toUpperCase()}
+                                        {p.userImage ? (
+                                            <img src={p.userImage} alt={p.userName} className="h-full w-full object-cover" />
+                                        ) : (
+                                            p.userName[0]?.toUpperCase()
+                                        )}
                                     </div>
                                 ))}
                                 {participants.length > 3 && (

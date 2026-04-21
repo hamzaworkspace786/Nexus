@@ -6,7 +6,7 @@ import { Providers } from "@/app/components/Providers";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Nexus | Collaborative Whiteboard with Google Meet Voice",
+  title: "Nexus | Collaborative Whiteboard with Built-in Voice Chat",
   description: "Define ideas, align on decisions, and talk effortlessly—all in one unified workspace.",
 };
 
