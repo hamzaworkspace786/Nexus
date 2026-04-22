@@ -261,23 +261,23 @@ export default function SettingsPage() {
             </header>
 
             {/* ── BODY ────────────────────────────────────────── */}
-            <div className="mx-auto flex max-w-screen-xl">
+            <div className="mx-auto flex flex-col md:flex-row max-w-screen-xl">
 
                 {/* ── LEFT SIDEBAR ──────────────────────────── */}
-                <aside className="sticky top-14 h-[calc(100vh-3.5rem)] w-56 shrink-0 border-r border-slate-800/60 pt-8 pb-6 flex flex-col justify-between">
-                    <div>
-                        <div className="px-5 mb-6">
+                <aside className="sticky top-14 h-auto md:h-[calc(100vh-3.5rem)] w-full md:w-56 shrink-0 border-b md:border-b-0 md:border-r border-slate-800/60 p-4 md:pt-8 md:pb-6 flex flex-row md:flex-col justify-between items-center md:items-stretch bg-slate-950/90 md:bg-transparent backdrop-blur-md z-40 overflow-x-auto custom-scrollbar">
+                    <div className="flex items-center md:block">
+                        <div className="hidden md:block px-5 mb-6">
                             <p className="text-base font-bold text-white">Settings</p>
                             <p className="text-xs text-slate-500 mt-0.5">Manage your experience</p>
                         </div>
-                        <nav className="flex flex-col gap-0.5 px-3">
+                        <nav className="flex flex-row md:flex-col gap-2 md:gap-0.5 px-0 md:px-3">
                             {navItems.map(({ id, label, icon: Icon }) => {
                                 const isActive = activeTab === id;
                                 return (
                                     <button
                                         key={id}
                                         onClick={() => setActiveTab(id)}
-                                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all text-left
+                                        className={`flex items-center gap-2 md:gap-3 rounded-xl px-4 py-2 md:px-3 md:py-2.5 text-sm font-medium transition-all text-left whitespace-nowrap
                                             ${isActive
                                                 ? "bg-gradient-to-r from-teal-500 to-lime-400 text-slate-900 shadow-lg shadow-teal-500/20"
                                                 : "text-slate-400 hover:text-white hover:bg-slate-800/60"
@@ -291,20 +291,20 @@ export default function SettingsPage() {
                         </nav>
                     </div>
 
-                    {/* Sign out at bottom */}
-                    <div className="px-3">
+                    {/* Sign out at bottom / right */}
+                    <div className="px-0 md:px-3 ml-4 md:ml-0 border-l md:border-l-0 border-slate-800/60 pl-4 md:pl-0">
                         <button
                             onClick={handleSignOut}
-                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 hover:text-red-400 hover:bg-red-500/5 transition-all"
+                            className="flex w-full items-center gap-2 md:gap-3 rounded-xl px-3 py-2 md:py-2.5 text-sm font-medium text-slate-500 hover:text-red-400 hover:bg-red-500/5 transition-all whitespace-nowrap"
                         >
                             <LogOut size={15} />
-                            Sign Out
+                            <span className="hidden md:inline">Sign Out</span>
                         </button>
                     </div>
                 </aside>
 
                 {/* ── MAIN CONTENT ──────────────────────────── */}
-                <main className="flex-1 px-10 py-10 min-h-[calc(100vh-3.5rem)]">
+                <main className="flex-1 px-4 md:px-10 py-6 md:py-10 min-h-[calc(100vh-3.5rem)]">
                     {search ? (
                         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="mb-8 border-b border-slate-800 pb-6">

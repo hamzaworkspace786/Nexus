@@ -144,7 +144,7 @@ function VoicePanel({ participants, isMuted, isSpeaking, onToggleMute, onLeave }
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute bottom-28 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
+            className="absolute bottom-36 md:bottom-28 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
         >
             <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl shadow-black/50 px-4 py-3 min-w-[260px]">
 
@@ -411,34 +411,34 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: {
             </div>
 
             {/* Top Bar */}
-            <div className="absolute top-6 left-0 right-0 px-6 flex justify-between items-start z-50 pointer-events-none">
+            <div className="absolute top-4 md:top-6 left-0 right-0 px-3 md:px-6 flex justify-between items-start z-50 pointer-events-none">
                 <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-                    className="pointer-events-auto flex items-center gap-4 bg-white px-5 py-3 rounded-full shadow-xl shadow-slate-200/50 border border-slate-100">
+                    className="pointer-events-auto flex items-center gap-2 md:gap-4 bg-white px-3 md:px-5 py-2 md:py-3 rounded-full shadow-xl shadow-slate-200/50 border border-slate-100">
                     <Link href="/dashboard" className="p-1 hover:bg-slate-50 rounded-full transition-colors active:scale-90 inline-block">
-                        <ArrowLeft className="w-5 h-5 text-slate-600" />
+                        <ArrowLeft className="w-4 h-4 md:w-5 md:h-5 text-slate-600" />
                     </Link>
-                    <div className="flex flex-col">
+                    <div className="flex flex-col max-w-[120px] md:max-w-none">
                         {isEditingName ? (
                             <input ref={nameInputRef} type="text" value={editingName}
                                 onChange={(e) => setEditingName(e.target.value)}
                                 onKeyDown={handleNameKeyDown} onBlur={handleNameSave}
-                                className="text-sm font-bold text-slate-900 leading-none bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 w-44 transition-all"
+                                className="text-sm font-bold text-slate-900 leading-none bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 w-24 md:w-44 transition-all"
                                 maxLength={50} />
                         ) : (
                             <button onClick={() => setIsEditingName(true)}
-                                className="text-sm font-bold text-slate-900 leading-none hover:text-teal-600 transition-colors cursor-text text-left">
+                                className="text-xs md:text-sm font-bold text-slate-900 leading-none hover:text-teal-600 transition-colors cursor-text text-left truncate w-full">
                                 {boardName}
                             </button>
                         )}
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">ID: {roomId}</span>
+                        <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5 md:mt-1 truncate w-full">ID: {roomId}</span>
                     </div>
                 </motion.div>
 
                 <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
-                    className="pointer-events-auto flex items-center gap-2 bg-white p-1.5 rounded-full shadow-xl shadow-slate-200/50 border border-slate-100">
-                    <div className="flex items-center gap-3 px-3">
+                    className="pointer-events-auto flex items-center gap-1 md:gap-2 bg-white p-1 md:p-1.5 rounded-full shadow-xl shadow-slate-200/50 border border-slate-100">
+                    <div className="flex items-center gap-2 md:gap-3 px-2 md:px-3">
                         <Link href="/settings">
-                            <div className="w-8 h-8 rounded-full border-2 border-teal-200 bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-900 shadow-sm cursor-pointer hover:opacity-80 transition-opacity overflow-hidden">
+                            <div className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-teal-200 bg-slate-100 flex items-center justify-center text-[8px] md:text-[10px] font-bold text-slate-900 shadow-sm cursor-pointer hover:opacity-80 transition-opacity overflow-hidden">
                                 {self.info?.picture ? (
                                     <img src={self.info.picture} alt="YOU" className="h-full w-full object-cover" />
                                 ) : (
@@ -446,14 +446,14 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: {
                                 )}
                             </div>
                         </Link>
-                        <div className="h-6 w-px bg-slate-100" />
+                        <div className="h-4 md:h-6 w-px bg-slate-100" />
 
                         {/* ── MIC BUTTON ── */}
                         <button
                             onClick={isInVoice ? leaveVoice : () => setShowHeadphoneWarning(true)}
                             title={isInVoice ? "Leave voice" : "Join voice chat"}
                             className={cn(
-                                "relative p-2 rounded-full transition-all active:scale-90",
+                                "relative p-1.5 md:p-2 rounded-full transition-all active:scale-90",
                                 isInVoice
                                     ? "bg-teal-500/10 text-teal-500 hover:bg-teal-500/20"
                                     : "hover:bg-slate-50 text-slate-600"
@@ -465,9 +465,9 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: {
                             )}
                             {isInVoice
                                 ? isMuted
-                                    ? <MicOff className="w-5 h-5 text-red-400" />
-                                    : <Mic className="w-5 h-5" />
-                                : <Mic className="w-5 h-5" />
+                                    ? <MicOff className="w-4 h-4 md:w-5 md:h-5 text-red-400" />
+                                    : <Mic className="w-4 h-4 md:w-5 md:h-5" />
+                                : <Mic className="w-4 h-4 md:w-5 md:h-5" />
                             }
                         </button>
 
@@ -476,7 +476,7 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: {
                             <div className="flex -space-x-1.5">
                                 {participants.slice(0, 3).map(p => (
                                     <div key={p.userId}
-                                        className="h-5 w-5 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white shrink-0 overflow-hidden"
+                                        className="h-4 w-4 md:h-5 md:w-5 rounded-full border-2 border-white flex items-center justify-center text-[6px] md:text-[8px] font-bold text-white shrink-0 overflow-hidden"
                                         style={{ backgroundColor: p.userColor }}
                                         title={p.userName}
                                     >
@@ -488,7 +488,7 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: {
                                     </div>
                                 ))}
                                 {participants.length > 3 && (
-                                    <div className="h-5 w-5 rounded-full border-2 border-white bg-slate-400 flex items-center justify-center text-[8px] font-bold text-white">
+                                    <div className="h-4 w-4 md:h-5 md:w-5 rounded-full border-2 border-white bg-slate-400 flex items-center justify-center text-[6px] md:text-[8px] font-bold text-white">
                                         +{participants.length - 3}
                                     </div>
                                 )}
@@ -497,8 +497,8 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: {
                     </div>
 
                     <button onClick={() => setShareOpen(true)}
-                        className="bg-gradient-to-r from-teal-500 to-lime-400 text-white px-6 py-2.5 rounded-full font-bold text-sm flex items-center gap-2 shadow-lg active:scale-95 transition-all hover:opacity-90">
-                        <Share2 className="w-4 h-4" /> Share
+                        className="bg-gradient-to-r from-teal-500 to-lime-400 text-slate-900 px-3 md:px-6 py-1.5 md:py-2.5 rounded-full font-bold text-xs md:text-sm flex items-center gap-1 md:gap-2 shadow-lg active:scale-95 transition-all hover:opacity-90">
+                        <Share2 className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden md:inline">Share</span>
                     </button>
                 </motion.div>
             </div>
@@ -517,55 +517,62 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: {
             </AnimatePresence>
 
             {/* Bottom Controls */}
-            <div className="absolute bottom-10 left-0 right-0 px-10 flex justify-between items-end z-50 pointer-events-none">
+            <div className="absolute bottom-4 md:bottom-10 left-0 right-0 px-3 md:px-10 flex flex-col md:flex-row justify-between items-center md:items-end gap-3 md:gap-4 z-50 pointer-events-none">
                 <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}
-                    className="pointer-events-auto flex items-center gap-4 bg-white px-5 py-3 rounded-full shadow-xl border border-slate-100">
-                    <span className="text-sm font-bold text-slate-900 w-10 text-center">{zoom}%</span>
-                    <div className="h-4 w-px bg-slate-100" />
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => editor?.undo()} disabled={!canUndo}
-                            className={cn("p-1.5 rounded-lg", canUndo ? "text-slate-600 hover:bg-slate-50" : "text-slate-200")}>
-                            <Undo2 className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => editor?.redo()} disabled={!canRedo}
-                            className={cn("p-1.5 rounded-lg", canRedo ? "text-slate-600 hover:bg-slate-50" : "text-slate-200")}>
-                            <Redo2 className="w-4 h-4" />
-                        </button>
+                    className="pointer-events-auto flex items-center gap-2 md:gap-4 bg-white px-3 md:px-5 py-2 md:py-3 rounded-full shadow-xl border border-slate-100 w-full md:w-auto justify-between md:justify-start">
+                    <div className="flex items-center gap-2 md:gap-4">
+                        <span className="text-xs md:text-sm font-bold text-slate-900 w-8 md:w-10 text-center">{zoom}%</span>
+                        <div className="h-4 w-px bg-slate-100" />
+                        <div className="flex items-center gap-1 md:gap-2">
+                            <button onClick={() => editor?.undo()} disabled={!canUndo}
+                                className={cn("p-1 md:p-1.5 rounded-lg", canUndo ? "text-slate-600 hover:bg-slate-50" : "text-slate-200")}>
+                                <Undo2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => editor?.redo()} disabled={!canRedo}
+                                className={cn("p-1 md:p-1.5 rounded-lg", canRedo ? "text-slate-600 hover:bg-slate-50" : "text-slate-200")}>
+                                <Redo2 className="w-4 h-4" />
+                            </button>
+                        </div>
                     </div>
+                    {/* Trash on mobile directly in zoom bar */}
+                    <button onClick={clearCanvas}
+                        className="flex md:hidden items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-all">
+                        <Trash2 className="w-4 h-4" />
+                    </button>
                 </motion.div>
 
                 <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
-                    className="pointer-events-auto flex items-center gap-1 bg-white p-2 rounded-full shadow-2xl border border-slate-100">
-                    <button onClick={() => selectTool("select")} className={cn("p-3 rounded-full transition-all", activeTool === "select" ? activeClass : inactiveClass)}>
-                        <MousePointer2 className="w-5 h-5" />
+                    className="pointer-events-auto flex items-center gap-1 bg-white p-1 md:p-2 rounded-full shadow-2xl border border-slate-100 flex-wrap justify-center w-full md:w-auto max-w-[calc(100vw-24px)] overflow-x-auto custom-scrollbar">
+                    <button onClick={() => selectTool("select")} className={cn("p-2 md:p-3 rounded-full transition-all shrink-0", activeTool === "select" ? activeClass : inactiveClass)}>
+                        <MousePointer2 className="w-4 h-4 md:w-5 md:h-5" />
                     </button>
-                    <button onClick={() => selectTool("draw")} className={cn("p-3 rounded-full transition-all", activeTool === "draw" ? activeClass : inactiveClass)}>
-                        <Pencil className="w-5 h-5" />
+                    <button onClick={() => selectTool("draw")} className={cn("p-2 md:p-3 rounded-full transition-all shrink-0", activeTool === "draw" ? activeClass : inactiveClass)}>
+                        <Pencil className="w-4 h-4 md:w-5 md:h-5" />
                     </button>
-                    <div className="grid grid-cols-6 gap-1.5 px-3 mx-1 border-x border-slate-100">
+                    <div className="grid grid-cols-6 md:grid-cols-6 gap-1 md:gap-1.5 px-2 md:px-3 mx-1 border-x border-slate-100 shrink-0">
                         {Object.entries(COLOR_MAP).map(([name, hex]) => (
                             <button key={name}
                                 onClick={() => changeColor(name.replace(/[A-Z]/g, m => "-" + m.toLowerCase()))}
-                                className={cn("w-4 h-4 rounded-full border border-slate-200 transition-all hover:scale-125",
+                                className={cn("w-3 h-3 md:w-4 md:h-4 rounded-full border border-slate-200 transition-all hover:scale-125",
                                     activeColor === name.replace(/[A-Z]/g, m => "-" + m.toLowerCase()) ? "ring-2 ring-teal-400 ring-offset-1 scale-110" : "")}
                                 style={{ backgroundColor: hex }} />
                         ))}
                     </div>
-                    <button onClick={() => selectTool("geo")} className={cn("p-3 rounded-full transition-all", activeTool === "geo" ? activeClass : inactiveClass)}>
-                        <Square className="w-5 h-5" />
+                    <button onClick={() => selectTool("geo")} className={cn("p-2 md:p-3 rounded-full transition-all shrink-0", activeTool === "geo" ? activeClass : inactiveClass)}>
+                        <Square className="w-4 h-4 md:w-5 md:h-5" />
                     </button>
-                    <button onClick={() => selectTool("text")} className={cn("p-3 rounded-full transition-all", activeTool === "text" ? activeClass : inactiveClass)}>
-                        <Type className="w-5 h-5" />
+                    <button onClick={() => selectTool("text")} className={cn("p-2 md:p-3 rounded-full transition-all shrink-0", activeTool === "text" ? activeClass : inactiveClass)}>
+                        <Type className="w-4 h-4 md:w-5 md:h-5" />
                     </button>
-                    <div className="h-6 w-px bg-slate-100 mx-1" />
+                    <div className="h-6 w-px bg-slate-100 mx-1 shrink-0" />
                     <button onClick={() => selectTool("note")}
-                        className={cn("p-3 rounded-full transition-all flex items-center justify-center", activeTool === "note" ? activeClass : "text-orange-500 hover:bg-orange-50")}
+                        className={cn("p-2 md:p-3 rounded-full transition-all flex items-center justify-center shrink-0", activeTool === "note" ? activeClass : "text-orange-500 hover:bg-orange-50")}
                         title="Add Sticky Note">
-                        <Plus className={cn("w-6 h-6 transition-transform", activeTool === "note" ? "rotate-45" : "rotate-0")} />
+                        <Plus className={cn("w-5 h-5 md:w-6 md:h-6 transition-transform", activeTool === "note" ? "rotate-45" : "rotate-0")} />
                     </button>
                 </motion.div>
 
-                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="pointer-events-auto">
+                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="pointer-events-auto hidden md:flex">
                     <button onClick={clearCanvas}
                         className="w-12 h-12 flex items-center justify-center bg-white rounded-full shadow-xl border border-slate-100 text-red-400 hover:text-red-600 hover:bg-red-50 transition-all active:scale-90">
                         <Trash2 className="w-6 h-6" />

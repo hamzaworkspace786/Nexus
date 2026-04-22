@@ -128,7 +128,7 @@ export default function RegisterPage() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6 }}
-                className="flex-1 flex flex-col justify-center items-center p-8 lg:p-24 bg-slate-950"
+                className="flex-1 flex flex-col justify-center items-center p-6 lg:p-24 bg-slate-950"
             >
                 <div className="w-full max-w-md space-y-8">
                     <div className="text-center lg:text-left">

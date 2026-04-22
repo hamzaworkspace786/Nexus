@@ -102,7 +102,7 @@ export default function DashboardPage() {
         <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col">
 
             {/* TopNavBar Shell */}
-            <nav className="fixed top-0 w-full z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800 flex justify-between items-center px-8 h-16">
+            <nav className="fixed top-0 w-full z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800 flex justify-between items-center px-4 md:px-8 h-16">
                 <div className="flex items-center gap-8">
                     <Link href="/" className="text-2xl font-black bg-gradient-to-r from-teal-400 to-lime-400 bg-clip-text text-transparent">
                         Nexus
@@ -154,7 +154,7 @@ export default function DashboardPage() {
             </nav>
 
             {/* Main Dashboard Content */}
-            <main className="pt-24 pb-16 px-8 max-w-7xl mx-auto w-full flex-grow">
+            <main className="pt-24 pb-16 px-4 md:px-8 max-w-7xl mx-auto w-full flex-grow">
 
                 {/* Header Section */}
                 <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -168,7 +168,7 @@ export default function DashboardPage() {
                         <div className="relative">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                             <input
-                                className="bg-slate-900/50 border border-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 rounded-xl pl-12 pr-4 py-3 w-64 text-sm text-slate-200 placeholder:text-slate-500 transition-all outline-none"
+                                className="bg-slate-900/50 border border-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 rounded-xl pl-12 pr-4 py-3 w-full sm:w-64 text-sm text-slate-200 placeholder:text-slate-500 transition-all outline-none"
                                 placeholder="Search boards..."
                                 type="text"
                                 value={searchQuery}
