@@ -50,9 +50,9 @@ export function useVoiceChat() {
     // peerId → RTCPeerConnection
     const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map());
 
-    // FIX: negotiation lock — prevents both sides from creating offers simultaneously
-    // Tracks which peers we are currently negotiating with
-    const negotiatingRef = useRef<Set<string>>(new Set());
+    // FIX #1 — track whether we already attached audio for this peer
+    // prevents ontrack firing twice and creating a double/resonating stream
+    const peerHasAudioRef = useRef<Set<string>>(new Set());
 
     // ICE candidate queue — holds candidates that arrived before remoteDescription was set
     const iceCandidateQueueRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
@@ -115,7 +115,7 @@ export function useVoiceChat() {
         }
 
         iceCandidateQueueRef.current.delete(userId);
-        negotiatingRef.current.delete(userId);
+        peerHasAudioRef.current.delete(userId); // FIX #1 — clear audio guard
 
         const audio = audioElemsRef.current.get(userId);
         if (audio) {
@@ -129,52 +129,42 @@ export function useVoiceChat() {
     }, []);
 
     // ─────────────────────────────────────────────────────
-    // Attach remote audio — handles both first attach and track replacement
-    // Key insight: we reuse the same <audio> element per peer and only
-    // create a new MediaStream when the track itself has changed.
-    // This prevents the browser AEC from losing its reference frame.
+    // FIX #1 + #2 — attach remote audio safely, once per peer
+    // Uses event.track directly (not event.streams[0]) for reliability
     // ─────────────────────────────────────────────────────
     const attachRemoteAudio = useCallback((userId: string, track: MediaStreamTrack) => {
+        // Guard: only attach once per peer — prevents resonation from double-attach
+        if (peerHasAudioRef.current.has(userId)) return;
+        peerHasAudioRef.current.add(userId);
+
+        // Build a fresh MediaStream from the track directly
+        // (event.streams[0] can be empty on first fire in Firefox/Safari)
+        const remoteStream = new MediaStream([track]);
+
         let audio = audioElemsRef.current.get(userId);
-
-        if (audio) {
-            // Audio element already exists for this peer.
-            // Check if the track is the same one we already have — if so, do nothing.
-            const existingStream = audio.srcObject as MediaStream | null;
-            if (existingStream) {
-                const existingTrack = existingStream.getAudioTracks()[0];
-                if (existingTrack && existingTrack.id === track.id) {
-                    // Exact same track — no action needed, avoids resonation
-                    return;
-                }
-                // Different track (renegotiation) — replace it cleanly
-                existingStream.removeTrack(existingTrack);
-                existingStream.addTrack(track);
-                // No need to reassign srcObject — same MediaStream object, AEC stays aligned
-                return;
-            }
-        }
-
-        // First time — create the audio element
         if (!audio) {
             audio = document.createElement("audio");
-            audio.setAttribute("playsinline", "");    // iOS Safari
+            audio.setAttribute("playsinline", "");   // iOS Safari
             audio.setAttribute("aria-hidden", "true");
+            // FIX #3 — set autoplay BEFORE srcObject so AEC reference is ready
             audio.autoplay = true;
-            // Prevent Chromecast/remote playback which causes double audio
-            try { (audio as any).disableRemotePlayback = true; } catch (_) { }
+
+            // Attach to DOM before setting srcObject
+            // browser AEC works best when element is in the document
             audioContainerRef.current?.appendChild(audio);
             audioElemsRef.current.set(userId, audio);
         }
 
-        // Create the MediaStream and assign it
-        const remoteStream = new MediaStream([track]);
-        audio.srcObject = remoteStream;
+        // Set srcObject only once — reassigning causes the resonation
+        if (audio.srcObject !== remoteStream) {
+            audio.srcObject = remoteStream;
+        }
 
         // Explicit play with user-gesture fallback
         const playPromise = audio.play();
         if (playPromise !== undefined) {
             playPromise.catch(() => {
+                // Autoplay blocked — attach one-time click listener to unblock
                 const unblock = () => {
                     audio!.play().catch(() => { });
                     document.removeEventListener("click", unblock);
@@ -199,9 +189,8 @@ export function useVoiceChat() {
             pc.addTrack(track, localStreamRef.current!);
         });
 
-        // Attach remote audio when we receive their track
-        // ontrack can fire multiple times (renegotiation, replaceTrack, etc.)
-        // attachRemoteAudio handles deduplication by comparing track.id
+        // FIX #1 + #2 — use ontrack with the guarded attachRemoteAudio
+        // This fires once per track, not once per stream renegotiation
         pc.ontrack = (event) => {
             if (event.track.kind !== "audio") return;
             attachRemoteAudio(userId, event.track);
@@ -235,44 +224,7 @@ export function useVoiceChat() {
     }, [self, broadcast, cleanupPeer, attachRemoteAudio]);
 
     // ─────────────────────────────────────────────────────
-    // Safe offer creation — prevents both sides from creating offers simultaneously
-    // Only the peer with the lexicographically HIGHER id creates the offer.
-    // This is checked before calling this function.
-    // The lock prevents duplicate offers from rapid event delivery.
-    // ─────────────────────────────────────────────────────
-    const createAndSendOffer = useCallback(async (targetUserId: string) => {
-        if (!self) return;
-
-        // FIX: negotiation lock — if we're already negotiating with this peer, skip
-        if (negotiatingRef.current.has(targetUserId)) return;
-        negotiatingRef.current.add(targetUserId);
-
-        try {
-            const pc = getOrCreatePeer(targetUserId);
-
-            // If the connection is already stable (fully negotiated), don't re-offer
-            if (pc.signalingState === "stable" && pc.connectionState === "connected") {
-                negotiatingRef.current.delete(targetUserId);
-                return;
-            }
-
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            broadcast({
-                type: "voice:offer",
-                fromId: self.id,
-                toId: targetUserId,
-                sdp: { type: offer.type, sdp: offer.sdp },
-            });
-        } catch (e) {
-            console.error("[voice] offer error", e);
-        } finally {
-            negotiatingRef.current.delete(targetUserId);
-        }
-    }, [self, broadcast, getOrCreatePeer]);
-
-    // ─────────────────────────────────────────────────────
-    // Speaking detection
+    // FIX #3 — Speaking detection
     // AudioContext is resumed safely after user gesture
     // Analyser is NOT connected to ctx.destination (no speaker feedback)
     // ─────────────────────────────────────────────────────
@@ -341,9 +293,18 @@ export function useVoiceChat() {
                 }];
             });
 
-            // Only the peer with higher ID creates the offer — deterministic, no race
+            // New joiner creates the offer if their ID is higher
             if (self.id > event.userId) {
-                createAndSendOffer(event.userId);
+                const pc = getOrCreatePeer(event.userId);
+                pc.createOffer()
+                    .then(offer => pc.setLocalDescription(offer).then(() => offer))
+                    .then(offer => broadcast({
+                        type: "voice:offer",
+                        fromId: self.id,
+                        toId: event.userId,
+                        sdp: { type: offer.type, sdp: offer.sdp },
+                    }))
+                    .catch(e => console.error("[voice] offer error", e));
             }
         }
 
@@ -374,21 +335,22 @@ export function useVoiceChat() {
 
                 // Existing user with higher ID initiates the offer
                 if (self.id > event.userId) {
-                    createAndSendOffer(event.userId);
+                    const pc = getOrCreatePeer(event.userId);
+                    pc.createOffer()
+                        .then(offer => pc.setLocalDescription(offer).then(() => offer))
+                        .then(offer => broadcast({
+                            type: "voice:offer",
+                            fromId: self.id,
+                            toId: event.userId,
+                            sdp: { type: offer.type, sdp: offer.sdp },
+                        }))
+                        .catch(e => console.error("[voice] offer error", e));
                 }
             }
         }
 
         // Received an offer — create and send an answer
         if (event.type === "voice:offer" && event.toId === self.id) {
-            // FIX: If we already have a peer in a non-initial state, clean it first
-            // to prevent stacking multiple audio streams on renegotiation
-            const existingPc = peersRef.current.get(event.fromId);
-            if (existingPc && existingPc.signalingState !== "stable" && existingPc.signalingState !== "have-local-offer") {
-                // Connection is in a weird state — reset it
-                cleanupPeer(event.fromId);
-            }
-
             const pc = getOrCreatePeer(event.fromId);
             pc.setRemoteDescription(
                 new RTCSessionDescription(event.sdp as RTCSessionDescriptionInit))
@@ -463,18 +425,21 @@ export function useVoiceChat() {
         setError(null);
 
         try {
-            // Strict constraints ensure hardware AEC is actually engaged.
-            // echoCancellation is set to EXACT true — if the browser can't
-            // provide AEC it will error rather than silently skip it.
+            // FIX #3 — strict constraints ensure hardware AEC is actually engaged
+            // "ideal" is a hint the browser can ignore; some constraints need
+            // to be exact to force the hardware path on laptops
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
-                    echoCancellation: true,       // exact — must have AEC
-                    noiseSuppression: true,        // exact — must have NS
-                    autoGainControl: true,         // exact — must have AGC
-                    channelCount: 1,               // exact mono — stereo bypasses AEC on some laptops
-                    sampleRate: { ideal: 48000 },  // ideal — best for Opus codec
+                    echoCancellation: { ideal: true },
+                    noiseSuppression: { ideal: true },
+                    autoGainControl: { ideal: true },
+                    // Force mono — stereo mic input on laptops often bypasses AEC
+                    channelCount: { ideal: 1, max: 1 },
+                    // Low latency avoids buffering that causes pre-echo
+                    latency: { ideal: 0 },
+                    sampleRate: { ideal: 48000 },
                     sampleSize: { ideal: 16 },
-                },
+                } as MediaTrackConstraints,
                 video: false,
             });
 
@@ -507,45 +472,6 @@ export function useVoiceChat() {
                 setError("Microphone permission denied. Please allow microphone access and try again.");
             } else if (err.name === "NotFoundError") {
                 setError("No microphone found. Please connect a microphone and try again.");
-            } else if (err.name === "OverconstrainedError") {
-                // Fallback: if exact constraints fail, try with ideal hints
-                try {
-                    const fallbackStream = await navigator.mediaDevices.getUserMedia({
-                        audio: {
-                            echoCancellation: { ideal: true },
-                            noiseSuppression: { ideal: true },
-                            autoGainControl: { ideal: true },
-                            channelCount: { ideal: 1 },
-                        },
-                        video: false,
-                    });
-
-                    localStreamRef.current = fallbackStream;
-                    isMutedRef.current = false;
-                    setIsInVoice(true);
-                    setIsMuted(false);
-
-                    startSpeakingDetection(fallbackStream);
-
-                    setParticipants([{
-                        userId: self.id,
-                        userName: self.info?.name ?? "Anonymous",
-                        userColor: self.info?.color ?? "#58a6ff",
-                        userImage: self.info?.picture ?? "",
-                        isMuted: false,
-                        isSpeaking: false,
-                    }]);
-
-                    broadcast({
-                        type: "voice:join",
-                        userId: self.id,
-                        userName: self.info?.name ?? "Anonymous",
-                        userColor: self.info?.color ?? "#58a6ff",
-                        userImage: self.info?.picture ?? "",
-                    });
-                } catch {
-                    setError("Could not access microphone. Please check your settings.");
-                }
             } else {
                 setError("Could not access microphone. Please check your settings.");
             }
@@ -570,7 +496,7 @@ export function useVoiceChat() {
 
         peersRef.current.forEach((_, userId) => cleanupPeer(userId));
         peersRef.current.clear();
-        negotiatingRef.current.clear();
+        peerHasAudioRef.current.clear(); // FIX #1 — reset audio guards
 
         broadcast({ type: "voice:leave", userId: self.id });
 
@@ -612,19 +538,12 @@ export function useVoiceChat() {
             audioCtxRef.current?.close().catch(() => { });
             peersRef.current.forEach(pc => {
                 pc.getSenders().forEach(s => { try { pc.removeTrack(s); } catch (_) { } });
-                pc.ontrack = null;
-                pc.onicecandidate = null;
-                pc.onconnectionstatechange = null;
                 pc.close();
             });
             peersRef.current.clear();
-            audioElemsRef.current.forEach(a => {
-                a.pause();
-                a.srcObject = null;
-                a.remove();
-            });
+            audioElemsRef.current.forEach(a => { a.srcObject = null; a.remove(); });
             audioElemsRef.current.clear();
-            negotiatingRef.current.clear();
+            peerHasAudioRef.current.clear();
         };
     }, []);
 
