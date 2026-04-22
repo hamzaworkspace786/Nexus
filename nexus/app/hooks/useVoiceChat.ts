@@ -409,6 +409,14 @@ export function useVoiceChat() {
                     autoGainControl: true,
                     channelCount: 1,
                     sampleRate: { ideal: 48000 },
+                    // @ts-ignore - Advanced Chrome constraints for aggressive AEC
+                    googEchoCancellation: true,
+                    googExperimentalEchoCancellation: true,
+                    googNoiseSuppression: true,
+                    googExperimentalNoiseSuppression: true,
+                    googAutoGainControl: true,
+                    googHighpassFilter: true,
+                    googTypingNoiseDetection: true,
                 } : {
                     echoCancellation: { ideal: true },
                     noiseSuppression: { ideal: true },
