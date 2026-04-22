@@ -8,9 +8,6 @@ import {
     useSelf,
 } from "@liveblocks/react/suspense";
 
-// ─────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────
 export type VoiceParticipant = {
     userId: string;
     userName: string;
@@ -20,60 +17,45 @@ export type VoiceParticipant = {
     isSpeaking: boolean;
 };
 
-// Google's free public STUN servers — no API key needed
 const ICE_SERVERS: RTCIceServer[] = [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
 ];
 
-// ─────────────────────────────────────────────────────────
-// Hook
-// ─────────────────────────────────────────────────────────
 export function useVoiceChat() {
     const self = useSelf();
     const broadcast = useBroadcastEvent();
 
-    // ── Public state ───────────────────────────────────────
     const [isInVoice, setIsInVoice] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [participants, setParticipants] = useState<VoiceParticipant[]>([]);
     const [error, setError] = useState<string | null>(null);
 
-    // ── Internal refs ──────────────────────────────────────
     const localStreamRef = useRef<MediaStream | null>(null);
     const isMutedRef = useRef(false);
     const isSpeakingRef = useRef(false);
-    const isInVoiceRef = useRef(false); // ref mirror so event listener always sees current value
-
-    // peerId → RTCPeerConnection
+    const isInVoiceRef = useRef(false);
     const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map());
-
-    // FIX #1 — track whether we already attached audio for this peer
-    // prevents ontrack firing twice and creating a double/resonating stream
-    const peerHasAudioRef = useRef<Set<string>>(new Set());
-
-    // ICE candidate queue — holds candidates that arrived before remoteDescription was set
+    const negotiatingRef = useRef<Set<string>>(new Set());
     const iceCandidateQueueRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
-
-    // Hidden DOM container for audio elements (required for mobile + strict browsers)
+    const peerStreamIdRef = useRef<Map<string, string>>(new Map());
     const audioContainerRef = useRef<HTMLDivElement | null>(null);
     const audioElemsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
 
-    // AudioContext for speaking detection
-    const audioCtxRef = useRef<AudioContext | null>(null);
-    const speakingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    // Speaking detection via getStats — NO AudioContext created
+    // AudioContext interferes with Chrome's AEC reference tracking
+    const speakingPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    // We need at least one sender to poll stats — store a reference
+    const localSenderRef = useRef<RTCRtpSender | null>(null);
 
-    // Keep isInVoiceRef in sync
-    useEffect(() => { isInVoiceRef.current = isInVoice; }, [isInVoice]);
-
-    // ── Create hidden audio container once on mount ────────
+    // ── Audio container — off-screen, NOT visibility:hidden ────
     useEffect(() => {
         const div = document.createElement("div");
         div.style.cssText =
-            "position:fixed;width:0;height:0;overflow:hidden;" +
-            "pointer-events:none;visibility:hidden;";
+            "position:fixed;left:-9999px;top:-9999px;" +
+            "width:1px;height:1px;pointer-events:none;";
         div.setAttribute("aria-hidden", "true");
         document.body.appendChild(div);
         audioContainerRef.current = div;
@@ -81,7 +63,56 @@ export function useVoiceChat() {
     }, []);
 
     // ─────────────────────────────────────────────────────
-    // Drain queued ICE candidates after remoteDescription is set
+    // Speaking detection using RTCRtpSender.getStats()
+    // This reads the audio input level directly from the
+    // RTP pipeline — no AudioContext, no interference with AEC
+    // ─────────────────────────────────────────────────────
+    const startSpeakingDetection = useCallback(() => {
+        if (speakingPollRef.current) clearInterval(speakingPollRef.current);
+
+        speakingPollRef.current = setInterval(async () => {
+            if (!self || !localSenderRef.current) return;
+
+            try {
+                const stats = await localSenderRef.current.getStats();
+                let inputLevel = 0;
+
+                stats.forEach((report) => {
+                    // "media-source" report contains audioLevel for the local mic
+                    if (report.type === "media-source" && report.kind === "audio") {
+                        inputLevel = report.audioLevel ?? 0;
+                    }
+                });
+
+                // audioLevel is 0.0–1.0 (linear, not dB)
+                // 0.01 ≈ -40dB — a reasonable speech threshold
+                const speaking = inputLevel > 0.01;
+
+                if (speaking !== isSpeakingRef.current) {
+                    isSpeakingRef.current = speaking;
+                    setIsSpeaking(speaking);
+                    broadcast({
+                        type: "voice:speaking",
+                        userId: self.id,
+                        isSpeaking: speaking,
+                    });
+                }
+            } catch (_) {
+                // Sender not ready yet — skip this tick
+            }
+        }, 200);
+    }, [self, broadcast]);
+
+    const stopSpeakingDetection = useCallback(() => {
+        if (speakingPollRef.current) {
+            clearInterval(speakingPollRef.current);
+            speakingPollRef.current = null;
+        }
+        localSenderRef.current = null;
+    }, []);
+
+    // ─────────────────────────────────────────────────────
+    // Drain ICE queue
     // ─────────────────────────────────────────────────────
     const drainIceQueue = useCallback(async (
         pc: RTCPeerConnection,
@@ -99,7 +130,7 @@ export function useVoiceChat() {
     }, []);
 
     // ─────────────────────────────────────────────────────
-    // Clean up one peer connection completely
+    // Clean up one peer
     // ─────────────────────────────────────────────────────
     const cleanupPeer = useCallback((userId: string) => {
         const pc = peersRef.current.get(userId);
@@ -110,12 +141,14 @@ export function useVoiceChat() {
             pc.ontrack = null;
             pc.onicecandidate = null;
             pc.onconnectionstatechange = null;
+            pc.onnegotiationneeded = null;
             pc.close();
             peersRef.current.delete(userId);
         }
 
         iceCandidateQueueRef.current.delete(userId);
-        peerHasAudioRef.current.delete(userId); // FIX #1 — clear audio guard
+        negotiatingRef.current.delete(userId);
+        peerStreamIdRef.current.delete(userId);
 
         const audio = audioElemsRef.current.get(userId);
         if (audio) {
@@ -129,53 +162,49 @@ export function useVoiceChat() {
     }, []);
 
     // ─────────────────────────────────────────────────────
-    // FIX #1 + #2 — attach remote audio safely, once per peer
-    // Uses event.track directly (not event.streams[0]) for reliability
+    // Attach remote audio
+    // Uses event.streams[0] directly — preserves the stream ID
+    // that the browser's AEC uses as its far-end reference.
+    // Guarded by stream ID — prevents double attachment.
     // ─────────────────────────────────────────────────────
-    const attachRemoteAudio = useCallback((userId: string, track: MediaStreamTrack) => {
-        // Guard: only attach once per peer — prevents resonation from double-attach
-        if (peerHasAudioRef.current.has(userId)) return;
-        peerHasAudioRef.current.add(userId);
-
-        // Build a fresh MediaStream from the track directly
-        // (event.streams[0] can be empty on first fire in Firefox/Safari)
-        const remoteStream = new MediaStream([track]);
+    const attachRemoteAudio = useCallback((
+        userId: string,
+        stream: MediaStream,
+    ) => {
+        // Same stream — nothing changed, skip to avoid restart glitch
+        if (peerStreamIdRef.current.get(userId) === stream.id) return;
+        peerStreamIdRef.current.set(userId, stream.id);
 
         let audio = audioElemsRef.current.get(userId);
+
         if (!audio) {
             audio = document.createElement("audio");
-            audio.setAttribute("playsinline", "");   // iOS Safari
+            audio.setAttribute("playsinline", "");
             audio.setAttribute("aria-hidden", "true");
-            // FIX #3 — set autoplay BEFORE srcObject so AEC reference is ready
             audio.autoplay = true;
-
-            // Attach to DOM before setting srcObject
-            // browser AEC works best when element is in the document
+            try { (audio as any).disableRemotePlayback = true; } catch (_) { }
             audioContainerRef.current?.appendChild(audio);
             audioElemsRef.current.set(userId, audio);
         }
 
-        // Set srcObject only once — reassigning causes the resonation
-        if (audio.srcObject !== remoteStream) {
-            audio.srcObject = remoteStream;
-        }
+        audio.pause();
+        audio.srcObject = stream;
 
-        // Explicit play with user-gesture fallback
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(() => {
-                // Autoplay blocked — attach one-time click listener to unblock
+        const p = audio.play();
+        if (p !== undefined) {
+            p.catch(() => {
                 const unblock = () => {
                     audio!.play().catch(() => { });
-                    document.removeEventListener("click", unblock);
                 };
-                document.addEventListener("click", unblock);
+                document.addEventListener("click", unblock, { once: true });
+                document.addEventListener("keydown", unblock, { once: true });
+                document.addEventListener("touchend", unblock, { once: true, passive: true });
             });
         }
     }, []);
 
     // ─────────────────────────────────────────────────────
-    // Create or retrieve a RTCPeerConnection for a user
+    // Create or get peer connection
     // ─────────────────────────────────────────────────────
     const getOrCreatePeer = useCallback((userId: string): RTCPeerConnection => {
         if (peersRef.current.has(userId)) {
@@ -184,19 +213,21 @@ export function useVoiceChat() {
 
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
-        // Add our mic tracks
         localStreamRef.current?.getTracks().forEach(track => {
-            pc.addTrack(track, localStreamRef.current!);
+            const sender = pc.addTrack(track, localStreamRef.current!);
+            // Store the first audio sender for speaking detection stats
+            if (track.kind === "audio" && !localSenderRef.current) {
+                localSenderRef.current = sender;
+            }
         });
 
-        // FIX #1 + #2 — use ontrack with the guarded attachRemoteAudio
-        // This fires once per track, not once per stream renegotiation
         pc.ontrack = (event) => {
             if (event.track.kind !== "audio") return;
-            attachRemoteAudio(userId, event.track);
+            if (event.streams?.[0]) {
+                attachRemoteAudio(userId, event.streams[0]);
+            }
         };
 
-        // Broadcast ICE candidates via Liveblocks as the signaling channel
         pc.onicecandidate = (event) => {
             if (!event.candidate || !self) return;
             const c = event.candidate.toJSON();
@@ -224,62 +255,37 @@ export function useVoiceChat() {
     }, [self, broadcast, cleanupPeer, attachRemoteAudio]);
 
     // ─────────────────────────────────────────────────────
-    // FIX #3 — Speaking detection
-    // AudioContext is resumed safely after user gesture
-    // Analyser is NOT connected to ctx.destination (no speaker feedback)
+    // Create and send offer (with lock)
     // ─────────────────────────────────────────────────────
-    const startSpeakingDetection = useCallback((stream: MediaStream) => {
-        const AudioContextClass =
-            window.AudioContext ?? (window as any).webkitAudioContext;
-        if (!AudioContextClass) return;
+    const createAndSendOffer = useCallback(async (targetUserId: string) => {
+        if (!self) return;
+        if (negotiatingRef.current.has(targetUserId)) return;
+        negotiatingRef.current.add(targetUserId);
 
-        const ctx = new AudioContextClass() as AudioContext;
-        audioCtxRef.current = ctx;
-
-        const tryResume = () => {
-            if (ctx.state === "suspended") ctx.resume().catch(() => { });
-        };
-
-        // Resume immediately (works if user already interacted with page)
-        tryResume();
-
-        // One-time gesture listeners as fallback
-        ["click", "keydown", "touchstart"].forEach(evt =>
-            document.addEventListener(evt, tryResume, { once: true, passive: true })
-        );
-
-        const source = ctx.createMediaStreamSource(stream);
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 512;
-        analyser.smoothingTimeConstant = 0.4; // smoother volume readings
-
-        // source → analyser only — deliberately NOT connected to ctx.destination
-        // connecting to destination would play the mic back through speakers = echo
-        source.connect(analyser);
-
-        const data = new Uint8Array(analyser.frequencyBinCount);
-
-        speakingIntervalRef.current = setInterval(() => {
-            if (ctx.state !== "running") return;
-            analyser.getByteFrequencyData(data);
-            const avg = data.reduce((a, b) => a + b, 0) / data.length;
-            const speaking = avg > 15;
-
-            if (speaking !== isSpeakingRef.current && self) {
-                isSpeakingRef.current = speaking;
-                setIsSpeaking(speaking);
-                broadcast({ type: "voice:speaking", userId: self.id, isSpeaking: speaking });
-            }
-        }, 150);
-    }, [self, broadcast]);
+        try {
+            const pc = getOrCreatePeer(targetUserId);
+            if (pc.signalingState === "stable" && pc.connectionState === "connected") return;
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            broadcast({
+                type: "voice:offer",
+                fromId: self.id,
+                toId: targetUserId,
+                sdp: { type: offer.type, sdp: offer.sdp },
+            });
+        } catch (e) {
+            console.error("[voice] offer error", e);
+        } finally {
+            negotiatingRef.current.delete(targetUserId);
+        }
+    }, [self, broadcast, getOrCreatePeer]);
 
     // ─────────────────────────────────────────────────────
-    // Liveblocks event listener
+    // Event listener
     // ─────────────────────────────────────────────────────
     useEventListener(({ event }) => {
         if (!self) return;
 
-        // Existing user announced themselves to a new joiner
         if (event.type === "voice:already-here" && event.userId !== self.id) {
             setParticipants(prev => {
                 if (prev.find(p => p.userId === event.userId)) return prev;
@@ -292,23 +298,9 @@ export function useVoiceChat() {
                     isSpeaking: false,
                 }];
             });
-
-            // New joiner creates the offer if their ID is higher
-            if (self.id > event.userId) {
-                const pc = getOrCreatePeer(event.userId);
-                pc.createOffer()
-                    .then(offer => pc.setLocalDescription(offer).then(() => offer))
-                    .then(offer => broadcast({
-                        type: "voice:offer",
-                        fromId: self.id,
-                        toId: event.userId,
-                        sdp: { type: offer.type, sdp: offer.sdp },
-                    }))
-                    .catch(e => console.error("[voice] offer error", e));
-            }
+            if (self.id > event.userId) createAndSendOffer(event.userId);
         }
 
-        // New user joined the voice channel
         if (event.type === "voice:join" && event.userId !== self.id) {
             setParticipants(prev => {
                 if (prev.find(p => p.userId === event.userId)) return prev;
@@ -322,7 +314,6 @@ export function useVoiceChat() {
                 }];
             });
 
-            // We are already in voice — announce ourselves to the new joiner
             if (isInVoiceRef.current) {
                 broadcast({
                     type: "voice:already-here",
@@ -332,25 +323,18 @@ export function useVoiceChat() {
                     userImage: self.info?.picture ?? "",
                     isMuted: isMutedRef.current,
                 });
-
-                // Existing user with higher ID initiates the offer
-                if (self.id > event.userId) {
-                    const pc = getOrCreatePeer(event.userId);
-                    pc.createOffer()
-                        .then(offer => pc.setLocalDescription(offer).then(() => offer))
-                        .then(offer => broadcast({
-                            type: "voice:offer",
-                            fromId: self.id,
-                            toId: event.userId,
-                            sdp: { type: offer.type, sdp: offer.sdp },
-                        }))
-                        .catch(e => console.error("[voice] offer error", e));
-                }
+                if (self.id > event.userId) createAndSendOffer(event.userId);
             }
         }
 
-        // Received an offer — create and send an answer
         if (event.type === "voice:offer" && event.toId === self.id) {
+            const existing = peersRef.current.get(event.fromId);
+            if (existing &&
+                existing.signalingState !== "stable" &&
+                existing.signalingState !== "have-local-offer") {
+                cleanupPeer(event.fromId);
+            }
+
             const pc = getOrCreatePeer(event.fromId);
             pc.setRemoteDescription(
                 new RTCSessionDescription(event.sdp as RTCSessionDescriptionInit))
@@ -366,7 +350,6 @@ export function useVoiceChat() {
                 .catch(e => console.error("[voice] answer error", e));
         }
 
-        // Received an answer — complete the handshake
         if (event.type === "voice:answer" && event.toId === self.id) {
             const pc = peersRef.current.get(event.fromId);
             if (pc && pc.signalingState !== "stable") {
@@ -377,7 +360,6 @@ export function useVoiceChat() {
             }
         }
 
-        // ICE candidate — queue if remoteDescription isn't set yet
         if (event.type === "voice:ice-candidate" && event.toId === self.id) {
             const pc = peersRef.current.get(event.fromId);
             if (!pc || !pc.remoteDescription) {
@@ -391,7 +373,6 @@ export function useVoiceChat() {
             }
         }
 
-        // Remote mute state changed
         if (event.type === "voice:mute-state" && event.userId !== self.id) {
             setParticipants(prev =>
                 prev.map(p =>
@@ -400,18 +381,14 @@ export function useVoiceChat() {
             );
         }
 
-        // Remote speaking state changed
         if (event.type === "voice:speaking" && event.userId !== self.id) {
             setParticipants(prev =>
                 prev.map(p =>
-                    p.userId === event.userId
-                        ? { ...p, isSpeaking: event.isSpeaking }
-                        : p
+                    p.userId === event.userId ? { ...p, isSpeaking: event.isSpeaking } : p
                 )
             );
         }
 
-        // Someone left voice
         if (event.type === "voice:leave" && event.userId !== self.id) {
             cleanupPeer(event.userId);
         }
@@ -421,34 +398,44 @@ export function useVoiceChat() {
     // Join voice
     // ─────────────────────────────────────────────────────
     const joinVoice = useCallback(async () => {
-        if (!self || isInVoice) return;
+        if (!self || isInVoiceRef.current) return;
         setError(null);
 
-        try {
-            // FIX #3 — strict constraints ensure hardware AEC is actually engaged
-            // "ideal" is a hint the browser can ignore; some constraints need
-            // to be exact to force the hardware path on laptops
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
+        const tryGetStream = async (exact: boolean) => {
+            return navigator.mediaDevices.getUserMedia({
+                audio: exact ? {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    channelCount: 1,
+                    sampleRate: { ideal: 48000 },
+                } : {
                     echoCancellation: { ideal: true },
                     noiseSuppression: { ideal: true },
                     autoGainControl: { ideal: true },
-                    // Force mono — stereo mic input on laptops often bypasses AEC
-                    channelCount: { ideal: 1, max: 1 },
-                    // Low latency avoids buffering that causes pre-echo
-                    latency: { ideal: 0 },
-                    sampleRate: { ideal: 48000 },
-                    sampleSize: { ideal: 16 },
-                } as MediaTrackConstraints,
+                    channelCount: { ideal: 1 },
+                },
                 video: false,
             });
+        };
+
+        try {
+            let stream: MediaStream;
+            try {
+                stream = await tryGetStream(true);
+            } catch (constraintErr: any) {
+                if (constraintErr.name === "OverconstrainedError") {
+                    stream = await tryGetStream(false);
+                } else {
+                    throw constraintErr;
+                }
+            }
 
             localStreamRef.current = stream;
             isMutedRef.current = false;
+            isInVoiceRef.current = true; // synchronous — before broadcast
             setIsInVoice(true);
             setIsMuted(false);
-
-            startSpeakingDetection(stream);
 
             setParticipants([{
                 userId: self.id,
@@ -467,7 +454,12 @@ export function useVoiceChat() {
                 userImage: self.info?.picture ?? "",
             });
 
+            // Start speaking detection AFTER first peer connects
+            // (we need a sender to poll stats from)
+            // The startSpeakingDetection call is deferred to getOrCreatePeer
+
         } catch (err: any) {
+            isInVoiceRef.current = false;
             if (err.name === "NotAllowedError") {
                 setError("Microphone permission denied. Please allow microphone access and try again.");
             } else if (err.name === "NotFoundError") {
@@ -476,27 +468,24 @@ export function useVoiceChat() {
                 setError("Could not access microphone. Please check your settings.");
             }
         }
-    }, [self, isInVoice, broadcast, startSpeakingDetection]);
+    }, [self, broadcast]);
 
     // ─────────────────────────────────────────────────────
     // Leave voice
     // ─────────────────────────────────────────────────────
     const leaveVoice = useCallback(() => {
         if (!self) return;
+        isInVoiceRef.current = false;
+
+        stopSpeakingDetection();
 
         localStreamRef.current?.getTracks().forEach(t => t.stop());
         localStreamRef.current = null;
 
-        if (speakingIntervalRef.current) {
-            clearInterval(speakingIntervalRef.current);
-            speakingIntervalRef.current = null;
-        }
-        audioCtxRef.current?.close().catch(() => { });
-        audioCtxRef.current = null;
-
         peersRef.current.forEach((_, userId) => cleanupPeer(userId));
         peersRef.current.clear();
-        peerHasAudioRef.current.clear(); // FIX #1 — reset audio guards
+        negotiatingRef.current.clear();
+        peerStreamIdRef.current.clear();
 
         broadcast({ type: "voice:leave", userId: self.id });
 
@@ -506,7 +495,18 @@ export function useVoiceChat() {
         setIsMuted(false);
         setIsSpeaking(false);
         setParticipants([]);
-    }, [self, broadcast, cleanupPeer]);
+    }, [self, broadcast, cleanupPeer, stopSpeakingDetection]);
+
+    // Start speaking detection once we have a peer connection with a sender
+    // (called inside getOrCreatePeer after first peer is established)
+    useEffect(() => {
+        if (!isInVoice) return;
+        // Give the peer connection a moment to set up the sender
+        const t = setTimeout(() => {
+            if (isInVoiceRef.current) startSpeakingDetection();
+        }, 1500);
+        return () => clearTimeout(t);
+    }, [isInVoice, startSpeakingDetection]);
 
     // ─────────────────────────────────────────────────────
     // Toggle mute
@@ -522,7 +522,6 @@ export function useVoiceChat() {
         setIsMuted(newMuted);
 
         broadcast({ type: "voice:mute-state", userId: self.id, isMuted: newMuted });
-
         setParticipants(prev =>
             prev.map(p => p.userId === self.id ? { ...p, isMuted: newMuted } : p)
         );
@@ -533,29 +532,25 @@ export function useVoiceChat() {
     // ─────────────────────────────────────────────────────
     useEffect(() => {
         return () => {
+            isInVoiceRef.current = false;
+            stopSpeakingDetection();
             localStreamRef.current?.getTracks().forEach(t => t.stop());
-            if (speakingIntervalRef.current) clearInterval(speakingIntervalRef.current);
-            audioCtxRef.current?.close().catch(() => { });
             peersRef.current.forEach(pc => {
                 pc.getSenders().forEach(s => { try { pc.removeTrack(s); } catch (_) { } });
-                pc.close();
+                pc.ontrack = null; pc.onicecandidate = null;
+                pc.onconnectionstatechange = null; pc.close();
             });
             peersRef.current.clear();
-            audioElemsRef.current.forEach(a => { a.srcObject = null; a.remove(); });
+            audioElemsRef.current.forEach(a => { a.pause(); a.srcObject = null; a.remove(); });
             audioElemsRef.current.clear();
-            peerHasAudioRef.current.clear();
+            negotiatingRef.current.clear();
+            peerStreamIdRef.current.clear();
         };
-    }, []);
+    }, [stopSpeakingDetection]);
 
     return {
-        isInVoice,
-        isMuted,
-        isSpeaking,
-        participants,
-        error,
-        joinVoice,
-        leaveVoice,
-        toggleMute,
+        isInVoice, isMuted, isSpeaking, participants, error,
+        joinVoice, leaveVoice, toggleMute,
         clearError: () => setError(null),
     };
 }

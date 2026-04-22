@@ -243,6 +243,59 @@ function ErrorToast({ message, onClose }: { message: string; onClose: () => void
 }
 
 // ─────────────────────────────────────────────────────────
+// HEADPHONE WARNING
+// ─────────────────────────────────────────────────────────
+function HeadphoneWarning({ onConfirm, onCancel }: {
+    onConfirm: () => void;
+    onCancel: () => void;
+}) {
+    // Only show on non-mobile devices
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(
+        typeof navigator !== "undefined" ? navigator.userAgent : ""
+    );
+    if (isMobile) { onConfirm(); return null; }
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+            <motion.div
+                initial={{ scale: 0.9, y: 10 }}
+                animate={{ scale: 1, y: 0 }}
+                className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            >
+                <div className="text-3xl mb-3">🎧</div>
+                <h3 className="text-white font-bold text-base mb-2">
+                    Headphones recommended
+                </h3>
+                <p className="text-slate-400 text-sm leading-relaxed mb-5">
+                    For best quality on desktop, use headphones or earbuds.
+                    Without them, your microphone may pick up audio from your
+                    speakers and cause echo for other participants.
+                </p>
+                <div className="flex gap-3">
+                    <button
+                        onClick={onConfirm}
+                        className="flex-1 bg-gradient-to-r from-teal-500 to-lime-400 text-slate-900 font-bold py-2.5 rounded-xl text-sm hover:opacity-90 transition-all"
+                    >
+                        Join anyway
+                    </button>
+                    <button
+                        onClick={onCancel}
+                        className="flex-1 border border-slate-600 text-slate-300 font-medium py-2.5 rounded-xl text-sm hover:bg-slate-800 transition-all"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────
 // CANVAS
 // ─────────────────────────────────────────────────────────
 export function Canvas({ roomId, boardName, onBoardNameChange }: {
@@ -259,6 +312,7 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: {
     const [shareOpen, setShareOpen] = useState(false);
     const nameInputRef = useRef<HTMLInputElement>(null);
     const self = useSelf();
+    const [showHeadphoneWarning, setShowHeadphoneWarning] = useState(false);
 
     // ── Voice chat hook ─────────────────────────────────
     const {
@@ -396,7 +450,7 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: {
 
                         {/* ── MIC BUTTON ── */}
                         <button
-                            onClick={isInVoice ? leaveVoice : joinVoice}
+                            onClick={isInVoice ? leaveVoice : () => setShowHeadphoneWarning(true)}
                             title={isInVoice ? "Leave voice" : "Join voice chat"}
                             className={cn(
                                 "relative p-2 rounded-full transition-all active:scale-90",
@@ -518,6 +572,15 @@ export function Canvas({ roomId, boardName, onBoardNameChange }: {
                     </button>
                 </motion.div>
             </div>
+
+            <AnimatePresence>
+                {showHeadphoneWarning && (
+                    <HeadphoneWarning
+                        onConfirm={() => { setShowHeadphoneWarning(false); joinVoice(); }}
+                        onCancel={() => setShowHeadphoneWarning(false)}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }
