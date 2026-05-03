@@ -7,12 +7,10 @@ import { headers } from "next/headers";
 // Import your MongoDB connection function (adjust path as needed)
 import { connectToDatabase } from "@/lib/db";
 
-export async function createBoardInDb(roomId: string) {
+export async function createBoard(name: string) {
     try {
-        // 1. Connect to MongoDB
         await connectToDatabase();
 
-        // 2. Secure the action: Get the logged-in user
         const session = await auth.api.getSession({
             headers: await headers(),
         });
@@ -21,18 +19,18 @@ export async function createBoardInDb(roomId: string) {
             throw new Error("Unauthorized: You must be logged in to create a board.");
         }
 
-        // 3. Save the room to the database
+        // Generate a unique roomId for Liveblocks
+        const roomId = Math.random().toString(36).substring(2, 11);
+
         const newBoard = await Board.create({
             roomId: roomId,
-            name: "Untitled Board",
+            name: name || "Untitled Board",
             ownerId: session.user.id,
         });
 
-        // We stringify and parse to avoid Next.js "plain object" warnings
         return JSON.parse(JSON.stringify(newBoard));
-
     } catch (error) {
-        console.error("Error creating board in DB:", error);
+        console.error("Error creating board:", error);
         throw new Error("Failed to create board");
     }
 }
@@ -60,7 +58,7 @@ export async function getBoardByRoomId(roomId: string) {
     }
 }
 
-export async function updateBoardName(roomId: string, name: string) {
+export async function updateBoardName(id: string, name: string) {
     try {
         await connectToDatabase();
 
@@ -73,7 +71,10 @@ export async function updateBoardName(roomId: string, name: string) {
         }
 
         const updatedBoard = await Board.findOneAndUpdate(
-            { roomId, ownerId: session.user.id },
+            { 
+                $or: [{ _id: id }, { roomId: id }], 
+                ownerId: session.user.id 
+            },
             { name: name.trim() || "Untitled Board" },
             { new: true }
         );
@@ -89,7 +90,35 @@ export async function updateBoardName(roomId: string, name: string) {
     }
 }
 
-export async function getUserBoards() {
+export async function deleteBoard(id: string) {
+    try {
+        await connectToDatabase();
+
+        const session = await auth.api.getSession({
+            headers: await headers(),
+        });
+
+        if (!session || !session.user) {
+            throw new Error("Unauthorized");
+        }
+
+        const deletedBoard = await Board.findOneAndDelete({
+            _id: id,
+            ownerId: session.user.id
+        });
+
+        if (!deletedBoard) {
+            throw new Error("Board not found or you don't have permission to delete it.");
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting board:", error);
+        throw new Error("Failed to delete board");
+    }
+}
+
+export async function getBoards() {
     try {
         await connectToDatabase();
 

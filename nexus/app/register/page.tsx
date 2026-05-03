@@ -80,7 +80,7 @@ export default function RegisterPage() {
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.2 }}
-                        className="w-12 h-12 rounded-xl brand-gradient flex items-center justify-center mb-8 shadow-xl shadow-primary/20"
+                        className="w-12 h-12 rounded-xl bg-gradient flex items-center justify-center mb-8 shadow-xl shadow-primary/20"
                     >
                         <Sparkles className="text-white w-6 h-6" />
                     </motion.div>
@@ -221,7 +221,7 @@ export default function RegisterPage() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full brand-gradient text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-primary/20 hover:shadow-2xl transition-all transform active:scale-[0.98] mt-4 flex justify-center items-center gap-2 disabled:opacity-70 disabled:active:scale-100"
+                            className="w-full bg-gradient text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-primary/20 hover:shadow-2xl transition-all transform active:scale-[0.98] mt-4 flex justify-center items-center gap-2 disabled:opacity-70 disabled:active:scale-100"
                         >
                             {isLoading ? (
                                 <>

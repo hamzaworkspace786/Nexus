@@ -17,9 +17,12 @@ import {
     Zap,
     Users,
     ChevronRight,
+    Trash2,
+    Edit2,
+    Check,
 } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
-import { createBoardInDb, getUserBoards } from "@/app/actions/boardActions";
+import { createBoard, deleteBoard, getBoards, updateBoardName } from "@/app/actions/boardActions";
 
 type Board = {
     _id: string;
@@ -38,6 +41,8 @@ export default function DashboardPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isCreating, setIsCreating] = useState(false);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editName, setEditName] = useState("");
 
     // Fetch all boards on mount
     useEffect(() => {
@@ -47,12 +52,40 @@ export default function DashboardPage() {
     const fetchBoards = async () => {
         setIsLoadingBoards(true);
         try {
-            const data = await getUserBoards();
+            const data = await getBoards();
             setBoards(data || []);
         } catch (error) {
             console.error("Failed to fetch boards:", error);
         } finally {
             setIsLoadingBoards(false);
+        }
+    };
+
+    const handleDeleteBoard = async (e: React.MouseEvent, id: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (confirm("Are you sure you want to delete this board?")) {
+            try {
+                await deleteBoard(id);
+                fetchBoards();
+            } catch (error) {
+                console.error("Failed to delete board:", error);
+            }
+        }
+    };
+
+    const handleSaveEdit = async (e: React.FormEvent | React.MouseEvent, id: string) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (!editName.trim()) return;
+        try {
+            await updateBoardName(id, editName);
+            setEditingId(null);
+            fetchBoards();
+        } catch (error) {
+            console.error("Failed to update board name:", error);
         }
     };
 
@@ -71,9 +104,8 @@ export default function DashboardPage() {
         if (isCreating) return;
         setIsCreating(true);
         try {
-            const newBoardId = Math.random().toString(36).substring(2, 10);
-            await createBoardInDb(newBoardId);
-            router.push(`/whiteboard/${newBoardId}`);
+            const board = await createBoard("Untitled Board");
+            router.push(`/whiteboard/${board.roomId}`);
         } catch (error) {
             console.error("Failed to create board:", error);
             alert("Something went wrong creating your board. Please try again.");
@@ -231,25 +263,79 @@ export default function DashboardPage() {
 
                     {/* Existing Board Cards */}
                     {!isLoadingBoards && filteredBoards.map((board) => (
-                        <Link
+                        <div
                             key={board._id}
-                            href={`/whiteboard/${board.roomId}`}
-                            className="group relative flex flex-col justify-between h-[280px] bg-slate-900/40 border border-slate-800 rounded-xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-teal-900/10 hover:scale-[1.02] hover:border-teal-500/40 hover:bg-slate-900/60 focus:outline-none overflow-hidden"
+                            onClick={() => editingId !== board._id && router.push(`/whiteboard/${board.roomId}`)}
+                            className="group relative flex flex-col justify-between h-[280px] bg-slate-900/40 border border-slate-800 rounded-xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-teal-900/10 hover:scale-[1.02] hover:border-teal-500/40 hover:bg-slate-900/60 focus:outline-none overflow-hidden cursor-pointer"
                         >
                             {/* Decorative gradient blob on hover */}
                             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-teal-500/10 to-lime-400/5 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -translate-y-8 translate-x-8" />
+
+                            {/* Action Buttons Overlay */}
+                            <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingId(board._id);
+                                        setEditName(board.name);
+                                    }}
+                                    className="p-2 rounded-lg bg-slate-800/80 text-slate-400 hover:text-teal-400 hover:bg-slate-700 transition-all active:scale-90"
+                                    title="Rename board"
+                                >
+                                    <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={(e) => handleDeleteBoard(e, board._id)}
+                                    className="p-2 rounded-lg bg-slate-800/80 text-slate-400 hover:text-red-400 hover:bg-slate-700 transition-all active:scale-90"
+                                    title="Delete board"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
 
                             {/* Top section */}
                             <div className="relative z-10">
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-800 to-slate-800/50 border border-slate-700/50 flex items-center justify-center mb-4 group-hover:from-teal-600/20 group-hover:to-lime-500/10 group-hover:border-teal-500/30 transition-all duration-300">
                                     <LayoutDashboard className="w-5 h-5 text-slate-500 group-hover:text-teal-400 transition-colors duration-300" />
                                 </div>
-                                <h3 className="text-lg font-bold text-slate-200 group-hover:text-white transition-colors leading-snug line-clamp-2">
-                                    {board.name}
-                                </h3>
-                                <p className="text-xs font-mono text-slate-600 mt-1.5 group-hover:text-slate-500 transition-colors">
-                                    {board.roomId}
-                                </p>
+                                
+                                {editingId === board._id ? (
+                                    <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                                        <input
+                                            autoFocus
+                                            className="bg-slate-800 border border-teal-500/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-teal-500 w-full"
+                                            value={editName}
+                                            onChange={(e) => setEditName(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") handleSaveEdit(null as any, board._id);
+                                                if (e.key === "Escape") setEditingId(null);
+                                            }}
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={(e) => handleSaveEdit(e, board._id)}
+                                                className="flex-1 bg-teal-600 hover:bg-teal-500 text-slate-950 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1"
+                                            >
+                                                <Check className="w-3 h-3" /> Save
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setEditingId(null); }}
+                                                className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-400 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <h3 className="text-lg font-bold text-slate-200 group-hover:text-white transition-colors leading-snug line-clamp-2">
+                                            {board.name}
+                                        </h3>
+                                        <p className="text-xs font-mono text-slate-600 mt-1.5 group-hover:text-slate-500 transition-colors">
+                                            {board.roomId}
+                                        </p>
+                                    </>
+                                )}
                             </div>
 
                             {/* Bottom section */}
@@ -259,10 +345,10 @@ export default function DashboardPage() {
                                     <span>{formatRelativeTime(board.createdAt)}</span>
                                 </div>
                                 <div className="text-xs font-bold text-slate-600 group-hover:text-teal-400 transition-colors uppercase tracking-wider">
-                                    Open →
+                                    {editingId === board._id ? "" : "Open →"}
                                 </div>
                             </div>
-                        </Link>
+                        </div>
                     ))}
                 </div>
 

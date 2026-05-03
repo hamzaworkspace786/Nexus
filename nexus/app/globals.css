@@ -73,11 +73,11 @@ html {
   }
 }
 
-.brand-gradient {
+.bg-gradient {
   background: linear-gradient(45deg, #00796B 0%, #CDDC39 100%);
 }
 
-.brand-gradient-hover:hover {
+.bg-gradient-hover:hover {
   background: linear-gradient(45deg, #00675b 0%, #b8c734 100%);
 }
 

@@ -52,7 +52,7 @@ const Navbar = ({ session }: { session: any }) => {
                 ) : (
                     <div className="flex items-center gap-4">
                         <Link className="hidden lg:block text-slate-600 font-medium text-sm px-4 py-2 hover:text-slate-900 transition-colors" href="/login">Log in</Link>
-                        <Link href="/register" className="brand-gradient text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-primary/20 brand-gradient-hover transition-all transform active:scale-95 text-center inline-block">
+                        <Link href="/register" className="bg-gradient text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-primary/20 bg-gradient-hover transition-all transform active:scale-95 text-center inline-block">
                             Sign Up
                         </Link>
                     </div>
@@ -104,7 +104,7 @@ const Hero = () => {
                     transition={{ delay: 0.3 }}
                     className="flex flex-col sm:flex-row items-center gap-4 pt-4"
                 >
-                    <Link href="/dashboard" className="w-full sm:w-auto brand-gradient text-white px-10 py-5 rounded-full text-lg font-bold shadow-xl shadow-primary/25 hover:shadow-2xl transition-all transform hover:-translate-y-1 text-center inline-block">
+                    <Link href="/dashboard" className="w-full sm:w-auto bg-gradient text-white px-10 py-5 rounded-full text-lg font-bold shadow-xl shadow-primary/25 hover:shadow-2xl transition-all transform hover:-translate-y-1 text-center inline-block">
                         Open Dashboard
                     </Link>
                     <Link href="/dashboard" className="w-full sm:w-auto border-2 border-outline px-10 py-5 rounded-full text-lg font-bold text-on-surface hover:bg-surface-container-low transition-all text-center inline-block">
@@ -309,7 +309,7 @@ const Features = () => {
 const CTA = () => {
     return (
         <section className="max-w-7xl mx-auto px-8 py-24">
-            <div className="brand-gradient rounded-3xl p-16 text-center text-white space-y-8 relative overflow-hidden">
+            <div className="bg-gradient rounded-3xl p-16 text-center text-white space-y-8 relative overflow-hidden">
                 <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "40px 40px" }}></div>
                 <h2 className="text-4xl lg:text-6xl font-black tracking-tighter relative z-10">Start building the future of work today.</h2>
                 <p className="text-xl opacity-90 max-w-2xl mx-auto relative z-10">Join 50,000+ companies using Nexus to bridge the gap between imagination and execution.</p>
